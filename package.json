@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "specflow": "node packages/cli/src/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.15.0",

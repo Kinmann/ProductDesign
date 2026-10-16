@@ -319,7 +319,7 @@ flowchart TB
 | `FEATURE_DEPENDS_ON` | Feature → Feature | 기능 간 의존 (PRD). 정합성 검사와 의존 지도에 쓴다 (5.10) | — (전파는 요구사항 의존으로) | — |
 | `DEPENDS_ON` | Requirement → Requirement | 요구사항 간 의존 (FDD). 다른 기능의 요구사항도 가리킬 수 있다 | 역방향 | medium |
 | `REFERS_TO` | (모든 기획 요소) → Term | 용어 참조 | 역방향 | low |
-| `CITES` | (모든 기획 요소) → BusinessRule | 정책 값 인용. 어느 항목을 어떤 값으로 인용했는지(`item`, `value`)를 속성으로 가진다 | 역방향 | high |
+| `CITES` | (모든 기획 요소) → BusinessRule | 정책 값 인용. 인용한 정책 항목(`item`)과 인용 문장(`text`)을 속성으로 가진다. 린트 L14는 정책의 현재 값이 인용 문장에 들어 있는지로 일치 여부를 본다 | 역방향 | high |
 | `COVERS` | Flow → Requirement | 플로우가 거치는 요구사항 | 양방향 | medium |
 | `PASSES_THROUGH` | Flow → Screen | 플로우가 지나가는 화면 (FDD → IA) | 양방향 | medium |
 | `CHILD_OF` | Screen → Screen | 메뉴 계층의 상위 화면 | 역방향 | low |
@@ -1662,7 +1662,7 @@ relations:
   FEATURE_DEPENDS_ON: { from: Feature, to: Feature,               propagate: none }   # 정합성 검사·의존 지도용 (5.10)
   DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: medium, max_depth: 1 }
   REFERS_TO:       { from: "*spec",     to: Term,               propagate: reverse, weight: low, max_depth: 1 }
-  CITES:           { from: "*spec",     to: BusinessRule,       propagate: reverse, weight: high, props: [item, value] }
+  CITES:           { from: "*spec",     to: BusinessRule,       propagate: reverse, weight: high, props: [item, text] }
 
   # 추적 관계: synced_version을 관리한다
   IMPLEMENTS: { from: DesignFrame,               to: [Screen, Requirement, Flow],       propagate: reverse, traceability: true }

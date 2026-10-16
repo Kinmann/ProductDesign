@@ -55,10 +55,23 @@ export interface Schema {
 }
 
 export class SchemaError extends Error {
-  constructor(readonly problems: string[]) {
+  readonly problems: string[];
+
+  constructor(problems: string[]) {
     super(`Invalid ontology schema:\n- ${problems.join("\n- ")}`);
     this.name = "SchemaError";
+    this.problems = problems;
   }
+}
+
+/** Node type whose `id_prefix` matches the ID's prefix (`REQ-SIGNUP-002` → Requirement). */
+export function nodeTypeForId(schema: Schema, id: string): NodeTypeDef | undefined {
+  const bare = id.slice(id.indexOf(":") + 1);
+  const prefix = bare.split("-")[0];
+  for (const type of schema.nodeTypes.values()) {
+    if (type.idPrefix === prefix) return type;
+  }
+  return undefined;
 }
 
 export function loadSchemaFile(path: string): Schema {
