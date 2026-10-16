@@ -1,0 +1,10 @@
+{
+  "name": "@specflow/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ontology MCP server (read tools, project scope enforcement)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

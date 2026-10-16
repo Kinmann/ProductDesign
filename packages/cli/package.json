@@ -1,0 +1,10 @@
+{
+  "name": "@specflow/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "specflow command line: lint, ingest, diff, impact",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

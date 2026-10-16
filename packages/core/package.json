@@ -1,0 +1,13 @@
+{
+  "name": "@specflow/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Schema loader, graph model, and in-memory graph shared by all packages",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "yaml": "2.6.1"
+  }
+}

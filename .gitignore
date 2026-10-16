@@ -9,3 +9,14 @@
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local secrets (Neo4j credentials etc.)
+.env
+.env.*
+!.env.example

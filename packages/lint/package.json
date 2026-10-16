@@ -1,0 +1,10 @@
+{
+  "name": "@specflow/lint",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Consistency rules L01–L18 over a graph snapshot",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

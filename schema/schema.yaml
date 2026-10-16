@@ -1,0 +1,73 @@
+# 온톨로지 스키마 — 기획서(PRD_ai-native-pipeline.md) 부록 A의 실제 파일.
+# 이 파일이 원본이다. 바꾸면 기획서 부록 A도 함께 고친다.
+
+version: 1
+
+common_props: [uid, project, id, type, domain, title, version, status, source, updated_at]
+constraints:
+  - unique: uid                 # uid = "{프로젝트 키}:{ID}" (5.9)
+indexes: [project, type, status]
+
+node_types:
+  Project:            { props: [key, name, spec_repo, owner] }
+  # doc_level: 기획 요소가 정의되는 문서 단계 (5.8)
+  Feature:            { id_prefix: FEAT, domain: spec, doc_level: prd }
+  Requirement:        { id_prefix: REQ,  domain: spec, doc_level: fdd }
+  AcceptanceCriteria: { id_prefix: AC,   domain: spec, doc_level: fdd }
+  BusinessRule:       { id_prefix: RULE, domain: spec, doc_level: [prd, fdd], props: [values] }  # values: { "최소 길이": "10자", ... }
+  Term:               { id_prefix: TERM, domain: spec, doc_level: prd }
+  Flow:               { id_prefix: FLOW, domain: spec, doc_level: fdd }
+  DataEntity:         { id_prefix: DATA, domain: spec, doc_level: fdd }
+  Screen:             { id_prefix: SCR,  domain: spec, doc_level: ia }
+  DesignFrame:        { id_prefix: DSN,  domain: design }
+  DesignComponent:    { id_prefix: DSC,  domain: design }
+  CodeModule:         { id_prefix: CODE, domain: dev }
+  APIEndpoint:        { id_prefix: API,  domain: dev }
+  DataModel:          { id_prefix: MDL,  domain: dev }
+  TestCase:           { id_prefix: TC,   domain: qa }
+
+# propagate
+#   forward: from 노드가 바뀌면 to 노드가 영향받음
+#   reverse: to 노드가 바뀌면 from 노드가 영향받음
+#   both:    양쪽 모두
+relations:
+  HAS_REQUIREMENT: { from: Feature,     to: Requirement,        propagate: forward, weight: low }
+  HAS_CRITERIA:    { from: Requirement, to: AcceptanceCriteria, propagate: both,    weight: high }
+  GOVERNED_BY:     { from: Requirement, to: BusinessRule,       propagate: reverse, weight: high }
+  APPEARS_ON:      { from: Requirement, to: Screen,             propagate: both,    weight: medium }
+  COVERS:          { from: Flow,        to: Requirement,        propagate: both,    weight: medium }
+  PASSES_THROUGH:  { from: Flow,        to: Screen,             propagate: both,    weight: medium }
+  CHILD_OF:        { from: Screen,      to: Screen,             propagate: reverse, weight: low }
+  NAVIGATES_TO:    { from: Screen,      to: Screen,             propagate: reverse, weight: low, max_depth: 1 }
+  USES:            { from: Requirement, to: DataEntity,         propagate: reverse, weight: medium }
+  FEATURE_DEPENDS_ON: { from: Feature, to: Feature,               propagate: none }   # 정합성 검사·의존 지도용 (5.10)
+  DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: medium, max_depth: 1 }
+  REFERS_TO:       { from: "*spec",     to: Term,               propagate: reverse, weight: low, max_depth: 1 }
+  CITES:           { from: "*spec",     to: BusinessRule,       propagate: reverse, weight: high, props: [item, value] }
+
+  # 추적 관계: synced_version을 관리한다
+  IMPLEMENTS: { from: DesignFrame,               to: [Screen, Requirement, Flow],       propagate: reverse, traceability: true }
+  REALIZES:   { from: [CodeModule, APIEndpoint], to: Requirement,                       propagate: reverse, traceability: true }
+  REALIZES_DATA: { from: DataModel,              to: DataEntity,                        propagate: reverse, traceability: true }
+  VERIFIES:   { from: TestCase,                  to: [AcceptanceCriteria, Requirement, Flow], propagate: reverse, traceability: true }
+
+field_labels:          # 문서 단계·요소 타입별 필드 라벨 → 관계 (6.2)
+  prd:
+    Feature:      { "의존": FEATURE_DEPENDS_ON }
+    BusinessRule: { "*": value, "설명": description }   # "- 항목: 값" 줄은 모두 정책 값
+  fdd:
+    front_matter: { feature: HAS_REQUIREMENT }
+    citation:     { pattern: "(RULE-ID 항목)", relation: CITES }   # 본문 어디서나
+    Requirement:  { "정책": GOVERNED_BY, "데이터": USES, "의존": DEPENDS_ON, "인수 조건": HAS_CRITERIA }
+    BusinessRule: { "*": value, "설명": description }   # "- 항목: 값" 줄은 모두 정책 값
+    Flow:         { "단계": COVERS }
+  ia:
+    Screen:       { "상위": CHILD_OF, "이동": NAVIGATES_TO, "요구사항": APPEARS_ON, "플로우": PASSES_THROUGH }
+
+sync_relations:        # synced_version을 관리하는 기획 요소 간 관계 (5.8, 5.10, 린트 L09)
+  - HAS_REQUIREMENT    # PRD → FDD
+  - GOVERNED_BY        # PRD 공통 정책 → FDD
+  - APPEARS_ON         # FDD → IA
+  - PASSES_THROUGH     # FDD → IA
+  - CITES              # PRD 정책 값 → FDD 본문
+  - DEPENDS_ON         # 같은 단계의 다른 기능 요구사항
