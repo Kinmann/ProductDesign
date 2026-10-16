@@ -98,7 +98,7 @@ export function staleLinkFindings(stale: StaleLink[], nodes: SpecNode[]): LintFi
       message:
         `상위 요소가 바뀌었는데 검토하지 않았습니다: ${idOf(link.lower)} ← ${idOf(link.upper)} ` +
         `(${link.relation}, v${link.syncedVersion} → v${link.upperVersion}). ` +
-        `고치거나 "specflow review ${idOf(link.lower)} --upper ${idOf(link.upper)}"로 변경 없음을 확인하세요`,
+        `고치거나 "specflow review ${idOf(link.lower)} --upper ${idOf(link.upper)} --specs <폴더> --project <키>"로 변경 없음을 확인하세요`,
       source: lower?.source ?? link.source,
       element: idOf(link.lower),
     };

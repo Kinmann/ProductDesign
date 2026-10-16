@@ -1,0 +1,15 @@
+# "변경 없음" 확인 기록 (린트 L09). 상위 요소의 이 내용(upperHash)을 보고 하위 요소를 검토했다는 뜻이다.
+# 상위 요소가 다시 바뀌면 해시가 달라져 확인이 무효가 된다.
+reviews:
+  - element: REQ-SIGNUP-002
+    upper: RULE-PW-001
+    upperHash: 85f47b90c18fcbc7
+    note: 정책 값을 직접 쓰지 않아 문구 변경 없음 (기획서 8.4)
+  - element: REQ-LOGIN-001
+    upper: RULE-PW-001
+    upperHash: 85f47b90c18fcbc7
+    note: 정책 값을 직접 쓰지 않아 문구 변경 없음 (기획서 8.4)
+  - element: REQ-ACCOUNT-004
+    upper: RULE-PW-001
+    upperHash: 85f47b90c18fcbc7
+    note: 정책 값을 직접 쓰지 않아 문구 변경 없음 (기획서 8.4)
