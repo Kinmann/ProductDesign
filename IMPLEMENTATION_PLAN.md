@@ -15,7 +15,7 @@
 | M2 파서 | 완료 | `specflow parse` |
 | M3 린트 | 완료 | `specflow lint`. L10은 요소가 자기 단계 문서에 있는지도 본다 |
 | M4 Neo4j 반영·변경 감지 | 완료 | `specflow ingest`·`link`·`review`·`lint --db`. 시나리오가 메모리 저장소와 로컬 Neo4j(2026.09.0) 양쪽에서 통과. 통합 테스트는 임시 프로젝트 키로 돌고 끝나면 지운다 |
-| M5 영향도 분석 | 대기 | |
+| M5 영향도 분석 | 완료 | `specflow impact` (반영 전 미리보기, `--changeset`으로 반영된 변경). **1a 완료 기준 달성**: 비밀번호 시나리오의 영향 분석이 기획서 8.4 ③과 일치 (메모리·Neo4j 양쪽). 결과 예시: `examples/demo/scenarios/password-policy/impact-report.md` |
 | M6 MCP 서버 | 대기 | |
 
 ---

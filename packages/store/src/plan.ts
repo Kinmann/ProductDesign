@@ -119,6 +119,15 @@ export function planIngest(stored: StoredGraph, snapshot: GraphSnapshot, options
   };
 }
 
+/** The stored graph as it will be after `plan` is applied: new spec layer, unchanged artifact layer. */
+export function graphAfter(stored: StoredGraph, plan: IngestPlan): StoredGraph {
+  const elements = new Map([...stored.elements].filter(([, e]) => e.layer !== "spec"));
+  for (const element of plan.elements) elements.set(element.uid, element);
+  const edges = new Map([...stored.edges].filter(([, e]) => e.layer !== "spec"));
+  for (const edge of plan.edges) edges.set(edgeKey(edge), edge);
+  return { project: stored.project, elements, edges, changeSetCount: stored.changeSetCount + (plan.changeSet ? 1 : 0) };
+}
+
 /**
  * The end of a sync relation that the other end must follow: the one in the higher stage
  * (PRD before FDD before IA). Within the same stage it is the target, e.g. the requirement depended on.

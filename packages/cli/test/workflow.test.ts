@@ -7,7 +7,8 @@ import { parse } from "yaml";
 import { loadSchemaFile } from "@specflow/core";
 import { parseSpecs } from "@specflow/parser";
 import { addReview, MemoryStore, Neo4jStore, neo4jConfigFromEnv, type GraphStore } from "@specflow/store";
-import { runIngest, runLink } from "../src/workflow.ts";
+import type { ImpactReport } from "@specflow/impact";
+import { runImpactPreview, runImpactRecorded, runIngest, runLink } from "../src/workflow.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const DEMO = join(ROOT, "examples/demo");
@@ -32,6 +33,21 @@ const asExpected = (findings: { code: string; element?: string; message: string 
     const upper = /← ([A-Z][A-Z0-9-]+)/.exec(f.message)?.[1];
     return { rule: f.code, element: f.element ?? "", ...(f.code === "L09" && upper && { upper }) };
   });
+/** The parts of a report that expected.yaml pins down (PRD 8.4 ③). */
+const impactView = (report: ImpactReport | undefined) => ({
+  artifacts: report?.artifacts.map((a) => ({ domain: a.domain, artifact: a.artifact, grade: a.grade, trace: a.trace })),
+  new_work: report?.newWork.map((w) => ({ domain: w.domain, element: w.element, action: w.action, grade: w.grade })),
+});
+const byArtifact = (a: { artifact: string }, b: { artifact: string }) => a.artifact.localeCompare(b.artifact);
+const expectedImpact = {
+  artifacts: [...expected.step2_cascaded.impact.artifacts].sort(byArtifact),
+  new_work: expected.step2_cascaded.impact.new_work,
+};
+const sortedView = (report: ImpactReport | undefined) => {
+  const view = impactView(report);
+  return { ...view, artifacts: view.artifacts?.sort(byArtifact) };
+};
+
 const sortL = (xs: L09[]) => [...xs].sort((a, b) => `${a.rule}${a.element}`.localeCompare(`${b.rule}${b.element}`));
 
 /** The password-policy scenario (PRD 8.4) end to end, against any store. */
@@ -89,6 +105,10 @@ function scenario(name: string, makeStore: () => Promise<{ store: GraphStore; pr
       const step2 = await ingest([SPECS, join(SCENARIO, "specs")]);
       expect(step2.applied).toBe(false);
       expect(sortL(asExpected(step2.lint.findings))).toEqual(sortL(expected.step2_cascaded.lint_errors));
+      // Even while blocked, the preview shows what the change would touch (PRD F5).
+      const preview = await runImpactPreview({ roots: [SPECS, join(SCENARIO, "specs")], project, schema, store, reviewsPath, specVersion: "test" });
+      expect(sortedView(preview.report)).toEqual(expectedImpact);
+
       const byElement = (a: { element: string }, b: { element: string }) => a.element.localeCompare(b.element);
       const changes = step2.plan.changeSet?.changes.map((c) => ({ element: c.id, op: c.op, change_type: c.changeType }));
       expect(changes?.sort(byElement)).toEqual([...expected.step2_cascaded.changeset].sort(byElement));
@@ -115,6 +135,13 @@ function scenario(name: string, makeStore: () => Promise<{ store: GraphStore; pr
       expect(synced("CITES", "AC-SIGNUP-002-01", "RULE-PW-001")).toBe(2);
       // Downstream artifacts still reflect the old spec: this is what impact analysis (M5) works from.
       expect(synced("VERIFIES", "TC-SIGNUP-007", "AC-SIGNUP-002-01")).toBe(1);
+    });
+
+    it("impact of the recorded ChangeSet matches PRD 8.4: 8 artifacts and 1 new work item", async () => {
+      const report = await runImpactRecorded(store, project, schema);
+      expect(report?.changeSet).toBe("CS-0002");
+      expect(sortedView(report)).toEqual(expectedImpact);
+      expect(report?.artifacts.map((a) => a.domain)).toEqual(["design", "design", "design", "dev", "dev", "qa", "qa", "qa"]);
     });
   });
 }

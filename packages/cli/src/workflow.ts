@@ -1,8 +1,10 @@
 import { execFileSync } from "node:child_process";
 import type { GraphSnapshot, Schema } from "@specflow/core";
+import { analyzeImpact, type ImpactReport } from "@specflow/impact";
 import { lint, staleLinkFindings, withFindings, type LintFinding, type LintResult } from "@specflow/lint";
 import { parseSpecs } from "@specflow/parser";
 import {
+  graphAfter,
   loadLinkFile,
   loadReviews,
   planIngest,
@@ -52,6 +54,30 @@ export async function runIngest(input: IngestInput): Promise<IngestOutcome> {
   const applied = !input.dryRun && result.errors === 0;
   if (applied) await store.applyIngest(plan);
   return { snapshot, plan, lint: result, applied };
+}
+
+/**
+ * Impact of the spec change in `roots` against what is stored, without writing anything (PR preview, PRD F5).
+ * The report is produced even when lint blocks the ingest, so the author sees what the change would touch.
+ */
+export async function runImpactPreview(
+  input: Omit<IngestInput, "dryRun">,
+): Promise<{ outcome: IngestOutcome; report?: ImpactReport }> {
+  const outcome = await runIngest({ ...input, dryRun: true });
+  if (!outcome.plan.changeSet) return { outcome };
+  const graph = graphAfter(await input.store.load(input.project), outcome.plan);
+  return { outcome, report: analyzeImpact(graph, outcome.plan.changeSet, { schema: input.schema }) };
+}
+
+/** Impact of a ChangeSet already ingested (`id` omitted: the latest one). */
+export async function runImpactRecorded(
+  store: GraphStore,
+  project: string,
+  schema: Schema,
+  id?: string,
+): Promise<ImpactReport | undefined> {
+  const changeSet = await store.loadChangeSet(project, id);
+  return changeSet && analyzeImpact(await store.load(project), changeSet, { schema });
 }
 
 export async function runLink(store: GraphStore, linksPath: string, schema: Schema, dryRun = false) {

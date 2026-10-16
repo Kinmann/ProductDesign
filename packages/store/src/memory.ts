@@ -34,8 +34,15 @@ export class MemoryStore implements GraphStore {
     for (const edge of plan.edges) graph.edges.set(edgeKey(edge), structuredClone(edge));
   }
 
+  async loadChangeSet(project: string, id?: string): Promise<ChangeSet | undefined> {
+    const own = this.changeSets.filter((c) => c.project === project);
+    const found = id ? own.find((c) => c.id === id) : own.at(-1);
+    return found && structuredClone(found);
+  }
+
   async deleteProject(project: string): Promise<void> {
     this.graphs.delete(project);
+    this.changeSets.splice(0, this.changeSets.length, ...this.changeSets.filter((c) => c.project !== project));
   }
 
   async close(): Promise<void> {}

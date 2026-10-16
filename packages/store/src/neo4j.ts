@@ -1,5 +1,5 @@
 import neo4j, { type Driver, type ManagedTransaction } from "neo4j-driver";
-import type { GraphStore, IngestPlan, LinkPlan, StoredEdge, StoredElement, StoredGraph } from "./types.ts";
+import type { ChangeSet, GraphStore, IngestPlan, LinkPlan, StoredEdge, StoredElement, StoredGraph } from "./types.ts";
 import { edgeKey } from "./types.ts";
 
 export interface Neo4jConfig {
@@ -172,6 +172,29 @@ export class Neo4jStore implements GraphStore {
       await this.upsertElements(tx, plan.elements);
       await this.upsertEdges(tx, plan.edges);
     });
+  }
+
+  async loadChangeSet(project: string, id?: string): Promise<ChangeSet | undefined> {
+    const session = this.driver.session({ ...this.sessionConfig(), defaultAccessMode: neo4j.session.READ });
+    try {
+      const result = await session.run(
+        `MATCH (c:ChangeSet {project: $project})
+         WHERE $id IS NULL OR c.id = $id
+         RETURN c ORDER BY c.id DESC LIMIT 1`,
+        { project, id: id ?? null },
+      );
+      const p = result.records[0]?.get("c").properties as Record<string, unknown> | undefined;
+      if (!p) return undefined;
+      return {
+        id: String(p.id),
+        project: String(p.project),
+        specVersion: String(p.specVersion),
+        createdAt: String(p.createdAt),
+        changes: JSON.parse(String(p.changes_json)),
+      };
+    } finally {
+      await session.close();
+    }
   }
 
   async deleteProject(project: string): Promise<void> {

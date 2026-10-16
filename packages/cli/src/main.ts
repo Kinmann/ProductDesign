@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { loadSchemaFile, type GraphSnapshot } from "@specflow/core";
+import { renderImpactMarkdown } from "@specflow/impact";
 import { lint, type LintResult } from "@specflow/lint";
 import { parseSpecs } from "@specflow/parser";
 import {
@@ -13,7 +14,7 @@ import {
   type ChangeSet,
   type GraphStore,
 } from "@specflow/store";
-import { runIngest, runLink } from "./workflow.ts";
+import { runImpactPreview, runImpactRecorded, runIngest, runLink } from "./workflow.ts";
 
 const DEFAULT_SCHEMA = fileURLToPath(new URL("../../../schema/schema.yaml", import.meta.url));
 
@@ -23,6 +24,7 @@ const USAGE = `사용법: specflow <명령> [옵션]
   parse <specs 폴더>     기획서를 읽어 그래프 스냅샷(JSON)을 출력한다
   lint <specs 폴더>      정합성 규칙을 검사한다. --db를 주면 저장소와 비교해 L05·L09도 검사한다
   ingest <specs 폴더>    기획서를 Neo4j에 반영한다. Error가 있으면 반영하지 않는다
+  impact <specs 폴더>    기획 변경의 영향도를 분석한다 (반영 전 미리보기). --changeset이면 반영된 변경을 분석한다
   link <links.yaml>      산출물과 기획 요소의 연결을 등록한다
   review <요소 ID>       상위 요소가 바뀐 하위 요소를 "변경 없음"으로 확인한다 (L09)
   reset                  프로젝트의 저장 데이터를 모두 지운다 (--yes 필요)
@@ -34,7 +36,8 @@ const USAGE = `사용법: specflow <명령> [옵션]
   --summary              parse: JSON 대신 개수와 문제 목록을 출력한다
   --base <폴더>          lint: 비교할 이전 버전 specs 폴더 (L05)
   --db                   lint: Neo4j 저장소와 비교한다 (L05, L09)
-  --json                 lint·ingest: 결과를 JSON으로 출력한다
+  --json                 lint·ingest·impact: 결과를 JSON으로 출력한다
+  --changeset <ID>       impact: 반영된 ChangeSet (예: CS-0002, latest)
   --dry-run              ingest·link: 반영하지 않고 계획만 보여준다
   --reviews <파일>       확인 기록 파일 (기본: <specs>/.specflow/reviews.yaml)
   --upper <요소 ID>      review: 바뀐 상위 요소
@@ -45,7 +48,7 @@ const USAGE = `사용법: specflow <명령> [옵션]
 Neo4j 접속 정보는 .env의 NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD(, NEO4J_DATABASE)에서 읽는다.
 `;
 
-const COMMANDS = ["parse", "lint", "ingest", "link", "review", "reset"];
+const COMMANDS = ["parse", "lint", "ingest", "impact", "link", "review", "reset"];
 
 async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
@@ -64,6 +67,7 @@ async function main(argv: string[]): Promise<number> {
       upper: { type: "string" },
       note: { type: "string" },
       specs: { type: "string" },
+      changeset: { type: "string" },
       yes: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -100,6 +104,16 @@ async function main(argv: string[]): Promise<number> {
     });
   }
 
+  if (command === "impact" && values.changeset) {
+    const id = values.changeset === "latest" ? undefined : values.changeset;
+    return withStore(async (store) => {
+      const report = await runImpactRecorded(store, project, schema, id);
+      if (!report) return fail(`ChangeSet이 없습니다: ${values.changeset}`);
+      process.stdout.write(values.json ? `${JSON.stringify(report, null, 2)}\n` : renderImpactMarkdown(report));
+      return 0;
+    });
+  }
+
   if (command === "review") {
     const specsDir = values.specs;
     if (!target || !values.upper || !specsDir) return fail("review <요소 ID> --upper <요소 ID> --specs <폴더>가 필요합니다.");
@@ -129,6 +143,25 @@ async function main(argv: string[]): Promise<number> {
     const result = lint(snapshot, { schema, ...(previous && { previous }) });
     process.stdout.write(values.json ? `${JSON.stringify(result, null, 2)}\n` : formatLint(result));
     return result.errors > 0 ? 2 : 0;
+  }
+
+  if (command === "impact") {
+    return withStore(async (store) => {
+      const { outcome, report } = await runImpactPreview({ roots, project, schema, store, reviewsPath });
+      if (!report) {
+        process.stdout.write("저장된 기획과 비교해 바뀐 요소가 없습니다.\n");
+        return 0;
+      }
+      if (values.json) {
+        process.stdout.write(`${JSON.stringify({ report, lint: outcome.lint }, null, 2)}\n`);
+      } else {
+        process.stdout.write(renderImpactMarkdown(report, { preview: true }));
+        if (outcome.lint.errors > 0) {
+          process.stdout.write(`\n> 린트 Error ${outcome.lint.errors}건이 있어 아직 반영할 수 없습니다. specflow lint --db로 확인하세요.\n`);
+        }
+      }
+      return 0;
+    });
   }
 
   // lint --db and ingest share the same plan; lint never writes.

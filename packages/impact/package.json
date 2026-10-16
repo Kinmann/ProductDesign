@@ -6,5 +6,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@specflow/core": "0.0.0",
+    "@specflow/parser": "0.0.0",
+    "@specflow/store": "0.0.0"
   }
 }

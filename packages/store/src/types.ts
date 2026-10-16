@@ -120,6 +120,8 @@ export interface GraphStore {
   load(project: string): Promise<StoredGraph>;
   applyIngest(plan: IngestPlan): Promise<void>;
   applyLinks(plan: LinkPlan): Promise<void>;
+  /** A recorded ChangeSet by id (`CS-0002`), or the latest one when `id` is omitted. */
+  loadChangeSet(project: string, id?: string): Promise<ChangeSet | undefined>;
   /** Removes everything stored for the project. */
   deleteProject(project: string): Promise<void>;
   close(): Promise<void>;
