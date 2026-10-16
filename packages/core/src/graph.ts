@@ -85,3 +85,20 @@ export function splitUid(uid: string): { project: string; id: string } {
 export function idPrefix(id: string): string {
   return splitUid(id).id.split("-")[0] ?? "";
 }
+
+/**
+ * A sync relation whose upper element changed but whose lower element was neither edited nor
+ * confirmed "no change" (lint L09, PRD 5.8).
+ */
+export interface StaleLink {
+  relation: string;
+  /** The element that must be reviewed. */
+  lower: string;
+  /** The changed element it depends on. */
+  upper: string;
+  upperVersion: number;
+  syncedVersion: number;
+  /** Content hash of the upper element; a review must name it to count. */
+  upperHash: string;
+  source: SourceRef;
+}

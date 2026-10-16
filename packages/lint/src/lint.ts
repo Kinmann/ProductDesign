@@ -9,6 +9,7 @@ import {
   type SpecDocument,
   type SpecEdge,
   type SpecNode,
+  type StaleLink,
 } from "@specflow/core";
 
 export type Severity = "error" | "warning";
@@ -34,7 +35,7 @@ export interface LintResult {
   warnings: number;
 }
 
-/** Rules that need state beyond one snapshot (L09) or an agent (L15) live elsewhere (M4, Phase 2). */
+/** L09 needs stored versions (see `staleLinkFindings`); L15 needs the Spec Agent (Phase 2). */
 export const RULES: Record<string, { severity: Severity; summary: string }> = {
   L01: { severity: "error", summary: "front matter 필수 필드" },
   L02: { severity: "error", summary: "기획 요소는 ID를 가진다" },
@@ -44,6 +45,7 @@ export const RULES: Record<string, { severity: Severity; summary: string }> = {
   L06: { severity: "error", summary: "요구사항마다 인수 조건 1개 이상" },
   L07: { severity: "error", summary: "같은 정책 항목을 다른 값으로 정의하지 않는다" },
   L08: { severity: "warning", summary: "용어집의 피할 표현을 쓰지 않는다" },
+  L09: { severity: "error", summary: "상위 단계 변경 후 하위 요소를 검토했다" },
   L10: { severity: "error", summary: "상위 단계 문서가 하위 단계 요소를 참조하지 않는다" },
   L11: { severity: "warning", summary: "요구사항이 IA 화면에 배치되어 있다" },
   L12: { severity: "warning", summary: "Feature마다 FDD가 있다" },
@@ -78,6 +80,36 @@ export function lint(snapshot: GraphSnapshot, options: LintOptions): LintResult 
     ...citations(ctx),
     ...featureDependencies(ctx),
   ].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line);
+  return {
+    findings,
+    errors: findings.filter((f) => f.severity === "error").length,
+    warnings: findings.filter((f) => f.severity === "warning").length,
+  };
+}
+
+/** L09: sync links whose upper element changed while the lower one was neither edited nor confirmed. */
+export function staleLinkFindings(stale: StaleLink[], nodes: SpecNode[]): LintFinding[] {
+  const byUid = new Map(nodes.map((n) => [n.uid, n]));
+  return stale.map((link) => {
+    const lower = byUid.get(link.lower);
+    return {
+      code: "L09",
+      severity: RULES.L09!.severity,
+      message:
+        `상위 요소가 바뀌었는데 검토하지 않았습니다: ${idOf(link.lower)} ← ${idOf(link.upper)} ` +
+        `(${link.relation}, v${link.syncedVersion} → v${link.upperVersion}). ` +
+        `고치거나 "specflow review ${idOf(link.lower)} --upper ${idOf(link.upper)}"로 변경 없음을 확인하세요`,
+      source: lower?.source ?? link.source,
+      element: idOf(link.lower),
+    };
+  });
+}
+
+/** Merges extra findings into a result and keeps the counts right. */
+export function withFindings(result: LintResult, extra: LintFinding[]): LintResult {
+  const findings = [...result.findings, ...extra].sort(
+    (a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line,
+  );
   return {
     findings,
     errors: findings.filter((f) => f.severity === "error").length,
