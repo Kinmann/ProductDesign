@@ -14,7 +14,7 @@
 | M1 파일럿 데이터 | 완료 | `examples/demo` |
 | M2 파서 | 완료 | `specflow parse` |
 | M3 린트 | 완료 | `specflow lint`. L10은 요소가 자기 단계 문서에 있는지도 본다 |
-| M4 Neo4j 반영·변경 감지 | 코드 완료, Neo4j 검증 대기 | `specflow ingest`·`link`·`review`·`lint --db`. 시나리오는 메모리 저장소에서 통과. Neo4j 통합 테스트는 `.env`가 생기면 실행된다 |
+| M4 Neo4j 반영·변경 감지 | 완료 | `specflow ingest`·`link`·`review`·`lint --db`. 시나리오가 메모리 저장소와 로컬 Neo4j(2026.09.0) 양쪽에서 통과. 통합 테스트는 임시 프로젝트 키로 돌고 끝나면 지운다 |
 | M5 영향도 분석 | 대기 | |
 | M6 MCP 서버 | 대기 | |
 
