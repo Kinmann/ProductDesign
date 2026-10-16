@@ -5,11 +5,18 @@
 | 항목 | 내용 |
 |---|---|
 | 문서 ID | PRD-PIPELINE-001 |
-| 버전 | v0.1 (초안) |
+| 버전 | v0.2 (초안) |
 | 작성일 | 2026-10-16 |
 | 작성자 | jisu.kim |
 | 상태 | Draft |
 | 연동 도구 | GitHub, Figma, ClickUp, Slack |
+
+**변경 이력**
+
+| 버전 | 날짜 | 내용 |
+|---|---|---|
+| v0.2 | 2026-10-16 | 기획 산출물을 PRD → FDD → IA 3단계로 나눔. 단계별 기획 요소, 단계 간 연결(5.8), 기획 내부 연쇄 수정(F1), 저장소 구조와 작성 예시 갱신 |
+| v0.1 | 2026-10-16 | 최초 작성 |
 
 ---
 
@@ -38,11 +45,11 @@
 
 ## 0. 한눈에 보기
 
-> 기획서를 **코드처럼** 다룬다. 기획서는 Git에서 버전 관리되고, 모든 기획 요소는 ID를 가진 노드로 **온톨로지(지식 그래프)** 에 연결된다. 기획이 바뀌면 그래프를 따라 영향받는 디자인·코드·TC를 찾아내고, **기획자가 승인하면** 도메인별 작업 요청이 ClickUp과 Slack으로 나간다. 각 산출물이 어느 기획 버전까지 반영됐는지는 온톨로지가 계속 추적한다.
+> 기획서를 **코드처럼** 다룬다. 기획은 **PRD → FDD → IA** 세 단계 문서로 만들고, 모두 Git에서 버전 관리한다. 모든 기획 요소는 ID를 가진 노드로 **온톨로지(지식 그래프)** 에 연결된다. 상위 단계가 바뀌면 Spec Agent가 하위 단계의 수정 초안을 같은 PR에 넣어 기획 안의 정합성을 먼저 맞춘다. 기획이 바뀌면 그래프를 따라 영향받는 디자인·코드·TC를 찾아내고, **기획자가 승인하면** 도메인별 작업 요청이 ClickUp과 Slack으로 나간다. 각 산출물이 어느 기획 버전까지 반영됐는지는 온톨로지가 계속 추적한다.
 
 ```mermaid
 flowchart LR
-    A["기획 작성/수정<br/>Markdown + Git"] --> B["온톨로지 연결<br/>요소·관계 갱신"]
+    A["기획 작성/수정<br/>PRD → FDD → IA"] --> B["온톨로지 연결<br/>요소·관계 갱신"]
     B --> C["변경 감지<br/>ChangeSet"]
     C --> D["영향도 분석<br/>Impact Report"]
     D --> E{"기획자 승인<br/>Slack"}
@@ -86,7 +93,8 @@ flowchart LR
 
 | 구분 | 내용 |
 |---|---|
-| **포함** | 기획서 작성 규약(Spec as Code)과 작성 보조 에이전트 |
+| **포함** | 기획 산출물 3단계(PRD → FDD → IA)의 작성 규약(Spec as Code)과 작성 보조 에이전트 |
+| | 기획 내부 연쇄 수정 (상위 단계 변경 시 하위 단계 수정 초안) |
 | | 기획서 → 온톨로지 연결 (파싱, 관계 추출, 버전 관리) |
 | | 하위 산출물 → 기획 역링크 규약 (디자인·코드·TC가 기획 ID를 참조하는 방식) |
 | | 변경 감지, 영향도 분석 |
@@ -101,7 +109,7 @@ flowchart LR
 
 | 역할 | 하는 일 | 이 시스템에서 얻는 것 |
 |---|---|---|
-| 기획자 (PM/PO) | 기획서 작성·수정, 변경 승인 | 변경 영향을 자동으로 파악하고, 전파와 반영 여부를 한곳에서 확인 |
+| 기획자 (PM/PO) | PRD·FDD·IA 작성·수정, 변경 승인 | 변경 영향을 자동으로 파악하고, 전파와 반영 여부를 한곳에서 확인 |
 | 디자이너 | Figma 작업 | 어떤 프레임을 왜 고쳐야 하는지 근거가 붙은 요청 |
 | 개발자 | 코드 구현 | 관련 요구사항·정책·코드 위치가 정리된 요청 |
 | QA | TC 작성·실행 | 수정·신규·폐기할 TC 목록과 검증 시점 |
@@ -127,8 +135,13 @@ flowchart LR
 
 | 용어 | 정의 |
 |---|---|
-| 기획서 (Spec) | Git 저장소에서 Markdown으로 관리하는 기획 문서. 기능·정책·화면 단위 파일로 나뉜다. |
-| 기획 요소 (Spec Element) | 기획서 안에서 ID를 가진 최소 단위. Feature, Requirement, AcceptanceCriteria, BusinessRule, Screen, DataEntity, Term이 있다. |
+| 기획서 (Spec) | Git 저장소에서 Markdown으로 관리하는 기획 문서. PRD, FDD, IA 세 단계로 나뉜다. |
+| PRD (Product Requirement Document) | 제품 전체의 목표, 대상 사용자, 범위, 기능 목록, 공통 정책, 성공 지표를 정의하는 최상위 기획 문서 |
+| FDD (Feature Design Document) | PRD의 기능 하나를 상세화한 문서. 요구사항, 인수 조건, 사용자 플로우, 예외 처리, 데이터를 정의한다. 기능마다 하나씩 쓴다. |
+| IA (Information Architecture) | 화면 구조 문서. 메뉴 계층, 화면 간 이동, 화면마다 어떤 요구사항이 배치되는지를 정의한다. |
+| 기획 단계 (doc_level) | 기획 요소가 정의된 문서 단계. `prd`, `fdd`, `ia` 중 하나 |
+| 기획 요소 (Spec Element) | 기획서 안에서 ID를 가진 최소 단위. Feature, BusinessRule, Term(PRD), Requirement, AcceptanceCriteria, Flow, DataEntity(FDD), Screen(IA)이 있다. |
+| 연쇄 수정 | 상위 단계 기획이 바뀌었을 때 하위 단계 기획을 맞춰 고치는 일. 같은 기획자가 같은 PR 안에서 처리한다. |
 | 요구사항 (Requirement, REQ) | 시스템이 해야 하는 일 하나. 하위 산출물이 연결되는 기본 단위다. |
 | 인수 조건 (AcceptanceCriteria, AC) | 요구사항이 충족됐는지 판단하는 검증 가능한 조건. TC의 근거가 된다. |
 | 정책 (BusinessRule, RULE) | 여러 요구사항에 공통으로 적용되는 규칙. 예: 비밀번호 정책 |
@@ -166,7 +179,7 @@ flowchart TB
         SA["Spec Agent"]
         IG["Ingestion Agent"]
         IM["Impact Agent"]
-        GHS["GitHub<br/>specs 저장소"]
+        GHS["GitHub specs 저장소<br/>PRD · FDD · IA"]
     end
 
     subgraph DESIGN["디자인 모듈"]
@@ -207,7 +220,7 @@ flowchart TB
 | 온톨로지 DB | 기획 요소, 산출물, 관계, 버전, 동기화 상태, CR을 저장하는 그래프 | 속성 그래프 DB (오픈 이슈 O1) |
 | Ontology MCP Server | 에이전트가 온톨로지를 읽고 쓰는 단일 창구. 도메인별 쓰기 권한을 제한한다. | MCP 서버 |
 | 전파 오케스트레이터 (Dispatcher) | CR 생성·승인 처리·발행·상태 관리. 같은 입력이면 항상 같은 결과를 낸다. | 결정적 워크플로 (LLM 사용 안 함) |
-| Spec Agent | 기획 작성 보조, 규약 변환, 충돌 탐지 | LLM 에이전트 (대화형) |
+| Spec Agent | 기획 작성 보조, 규약 변환, 충돌 탐지, PRD → FDD → IA 연쇄 수정 초안 | LLM 에이전트 (대화형) |
 | Ingestion Agent | 기획서 파싱, 온톨로지 반영, ChangeSet 생성 | 코드 + LLM 보조 |
 | Impact Agent | 그래프 탐색으로 영향 분석, LLM으로 보정 | 코드 + LLM 보정 |
 | 도메인 에이전트 | 디자인·개발·QA 작업 수행 | 이번 범위 밖. 인터페이스만 정의 |
@@ -236,17 +249,19 @@ flowchart TB
 
 ### 5.2 노드 타입
 
-**기획 도메인** — Git의 기획서에서 생성된다.
+**기획 도메인** — Git의 기획서에서 생성된다. 모든 기획 요소는 자신이 정의된 문서 단계를 `doc_level` 속성(`prd`, `fdd`, `ia`)으로 가진다.
 
-| 타입 | ID 접두사 | 설명 | 예시 |
-|---|---|---|---|
-| Feature | `FEAT` | 사용자 관점의 기능 묶음 | `FEAT-SIGNUP` 회원가입 |
-| Requirement | `REQ` | 요구사항 | `REQ-SIGNUP-002` 비밀번호 설정 |
-| AcceptanceCriteria | `AC` | 인수 조건 | `AC-SIGNUP-002-01` |
-| BusinessRule | `RULE` | 정책 | `RULE-PW-001` 비밀번호 정책 |
-| Screen | `SCR` | 화면 | `SCR-SIGNUP` 회원가입 화면 |
-| DataEntity | `DATA` | 데이터 항목 | `DATA-USER` 사용자 |
-| Term | `TERM` | 용어 | `TERM-MEMBER` 회원 |
+| 단계 | 타입 | ID 접두사 | 설명 | 예시 |
+|---|---|---|---|---|
+| PRD | Feature | `FEAT` | 사용자 관점의 기능 묶음. FDD 하나와 짝을 이룬다 | `FEAT-SIGNUP` 회원가입 |
+| PRD | BusinessRule | `RULE` | 여러 기능에 걸친 공통 정책 | `RULE-PW-001` 비밀번호 정책 |
+| PRD | Term | `TERM` | 용어 | `TERM-MEMBER` 회원 |
+| FDD | Requirement | `REQ` | 요구사항 | `REQ-SIGNUP-002` 비밀번호 설정 |
+| FDD | AcceptanceCriteria | `AC` | 인수 조건 | `AC-SIGNUP-002-01` |
+| FDD | Flow | `FLOW` | 사용자 플로우 (요구사항들을 거치는 순서) | `FLOW-SIGNUP-01` 이메일 가입 |
+| FDD | DataEntity | `DATA` | 데이터 항목 | `DATA-USER` 사용자 |
+| FDD | BusinessRule | `RULE` | 한 기능에만 적용되는 정책 | `RULE-SIGNUP-001` 가입 연령 제한 |
+| IA | Screen | `SCR` | 화면. 메뉴 계층과 화면 간 이동을 가진다 | `SCR-SIGNUP` 회원가입 화면 |
 
 **하위 도메인** — 각 도메인이 산출물을 등록할 때 생성된다.
 
@@ -279,21 +294,25 @@ flowchart TB
 
 | 관계 | 출발 → 도착 | 의미 | 전파 | 가중치 |
 |---|---|---|---|---|
-| `HAS_REQUIREMENT` | Feature → Requirement | 기능이 요구사항을 포함 | 정방향 | low |
+| `HAS_REQUIREMENT` | Feature → Requirement | 기능이 요구사항을 포함 (PRD → FDD) | 정방향 | low |
 | `HAS_CRITERIA` | Requirement → AC | 요구사항의 인수 조건 | 양방향 | high |
 | `GOVERNED_BY` | Requirement → BusinessRule | 요구사항이 정책을 따름 | 역방향 | high |
-| `APPEARS_ON` | Requirement → Screen | 요구사항이 화면에 나타남 | 양방향 | medium |
+| `APPEARS_ON` | Requirement → Screen | 요구사항이 화면에 나타남 (FDD → IA) | 양방향 | medium |
 | `USES` | Requirement → DataEntity | 요구사항이 데이터를 사용 | 역방향 | medium |
 | `DEPENDS_ON` | Requirement → Requirement | 요구사항 간 의존 | 역방향 | low |
 | `REFERS_TO` | (모든 기획 요소) → Term | 용어 참조 | 역방향 | low |
+| `COVERS` | Flow → Requirement | 플로우가 거치는 요구사항 | 양방향 | medium |
+| `PASSES_THROUGH` | Flow → Screen | 플로우가 지나가는 화면 (FDD → IA) | 양방향 | medium |
+| `CHILD_OF` | Screen → Screen | 메뉴 계층의 상위 화면 | 역방향 | low |
+| `NAVIGATES_TO` | Screen → Screen | 화면 간 이동 | 역방향 | low |
 
 **추적 관계** — 산출물을 기획에 연결한다. 모두 `synced_version` 속성을 가진다.
 
 | 관계 | 출발 → 도착 | 의미 | 전파 |
 |---|---|---|---|
-| `IMPLEMENTS` | DesignFrame → Screen, Requirement | 디자인이 화면·요구사항을 구현 | 역방향 |
+| `IMPLEMENTS` | DesignFrame → Screen, Requirement, Flow | 디자인이 화면·요구사항·플로우(프로토타입)를 구현 | 역방향 |
 | `REALIZES` | CodeModule, APIEndpoint → Requirement / DataModel → DataEntity | 코드가 요구사항·데이터를 구현 | 역방향 |
-| `VERIFIES` | TestCase → AC, Requirement | TC가 인수 조건·요구사항을 검증 | 역방향 |
+| `VERIFIES` | TestCase → AC, Requirement, Flow | TC가 인수 조건·요구사항·플로우(E2E)를 검증 | 역방향 |
 
 **메타 관계**
 
@@ -312,14 +331,19 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph SPEC["기획"]
+    subgraph PRD["기획 · PRD"]
         FEAT["Feature"]
+        RULE["BusinessRule"]
+        TERM["Term"]
+    end
+    subgraph FDD["기획 · FDD"]
         REQ["Requirement"]
         AC["AcceptanceCriteria"]
-        RULE["BusinessRule"]
-        SCR["Screen"]
+        FLOW["Flow"]
         DATA["DataEntity"]
-        TERM["Term"]
+    end
+    subgraph IA["기획 · IA"]
+        SCR["Screen"]
     end
     subgraph DSG["디자인"]
         DSN["DesignFrame"]
@@ -339,6 +363,9 @@ flowchart LR
     REQ -->|APPEARS_ON| SCR
     REQ -->|USES| DATA
     REQ -.->|REFERS_TO| TERM
+    FLOW -->|COVERS| REQ
+    FLOW -->|PASSES_THROUGH| SCR
+    SCR -.->|CHILD_OF / NAVIGATES_TO| SCR
     DSN -->|IMPLEMENTS| SCR
     DSN -->|IMPLEMENTS| REQ
     CODE -->|REALIZES| REQ
@@ -394,6 +421,55 @@ AC-SIGNUP-002-01 (version 2)
 | `report_completion(cr_id, result)` | CR 완료·반영 불필요 회신 | 도메인 에이전트, 담당자 | 자기 도메인 CR |
 | `get_sync_status(scope)` | 동기화 현황 조회 | 기획자, Dispatcher | 읽기 |
 
+### 5.8 기획 단계(PRD · FDD · IA) 간 연결
+
+기획 도메인 안에도 상위에서 하위로 내려가는 흐름이 있다. 하위 단계 문서는 상위 단계 요소를 참조하고, 상위 단계 문서는 하위 단계를 참조하지 않는다.
+
+```mermaid
+flowchart LR
+    subgraph P["PRD · 제품"]
+        F["Feature"]
+        R["공통 BusinessRule"]
+    end
+    subgraph D["FDD · 기능"]
+        RQ["Requirement · AC"]
+        FL["Flow"]
+    end
+    subgraph I["IA · 화면 구조"]
+        S["Screen"]
+    end
+    F -->|HAS_REQUIREMENT| RQ
+    R -->|GOVERNED_BY| RQ
+    RQ -->|APPEARS_ON| S
+    FL -->|PASSES_THROUGH| S
+    D ==>|"개발 · QA 기준"| OUT1["코드 · TC"]
+    I ==>|"디자인 기준 (FDD와 함께)"| OUT2["Figma"]
+```
+
+> 그림의 화살표는 "상위가 하위의 근거가 된다"는 흐름을 나타낸다. 온톨로지에 저장되는 관계의 방향은 5.3 표를 따른다 (예: `GOVERNED_BY`는 Requirement → BusinessRule).
+
+**단계별로 정하는 것**
+
+| 단계 | 단위 | 정하는 것 | 참조하는 상위 요소 |
+|---|---|---|---|
+| PRD | 제품(또는 제품 영역) 하나 | 목표, 대상 사용자, 범위, 기능 목록(Feature), 공통 정책, 성공 지표 | — |
+| FDD | 기능(Feature) 하나 | 요구사항, 인수 조건, 사용자 플로우, 예외 처리, 데이터, 기능 전용 정책 | Feature, 공통 정책, 용어 |
+| IA | 제품 하나 (사이트맵 + 화면별 파일) | 메뉴 계층, 화면 간 이동, 화면마다 배치할 요구사항 | 요구사항, 플로우 |
+
+**하위 도메인이 기준으로 삼는 단계**
+
+| 도메인 | 주 기준 | 함께 보는 것 |
+|---|---|---|
+| 디자인 | IA (화면 구조, 이동) | FDD (요구사항, 플로우, 노출 문구) |
+| 개발 | FDD (요구사항, 정책, 데이터) | IA (라우팅, 화면 간 이동) |
+| QA | FDD (인수 조건, 플로우) | IA (E2E 경로) |
+
+**기획 단계 간 동기화**
+
+- 단계를 넘는 관계(`HAS_REQUIREMENT`, `GOVERNED_BY`, `APPEARS_ON`, `PASSES_THROUGH`)도 추적 관계처럼 `synced_version`을 가진다. 예를 들어 IA의 화면이 FDD 요구사항을 참조할 때, 그 요구사항의 어느 버전을 보고 배치했는지 기록한다.
+- 상위 단계 요소가 바뀌면 이 링크로 하위 단계 요소가 Stale이 된다. 하위 단계 기획자에게 따로 변경 요청(CR)을 보내지 않는다. PRD·FDD·IA를 같은 기획자가 쓰므로, Spec Agent가 **같은 PR 안에** 하위 단계 수정 초안을 넣고 기획자가 검토한다 (F1).
+- 기획자가 하위 요소를 수정하거나 "변경 없음"으로 확인하면 `synced_version`이 올라간다. 하위 단계에 Stale이 남은 PR은 merge할 수 없다 (린트 L09). 그래서 디자인·개발·QA로 전파가 시작되는 시점에는 PRD·FDD·IA가 항상 서로 맞는 상태다.
+
 ---
 
 ## 6. 기획서 작성 규약 (Spec as Code)
@@ -402,73 +478,164 @@ AC-SIGNUP-002-01 (version 2)
 
 ### 6.1 저장소 구조
 
+문서 단계마다 폴더를 나눈다. 상위 단계에서 하위 단계 순서로 작성한다.
+
 ```text
 specs/
 ├── _ontology/
 │   └── schema.yaml           # 노드·관계 타입 정의 (부록 A)
 ├── glossary.md               # 용어 (TERM)
-├── features/                 # 기능별 기획서 (FEAT, REQ, AC)
+├── prd/                      # 1단계 PRD
+│   ├── prd.md                # 목표, 사용자, 범위, 기능 목록(FEAT), 성공 지표
+│   └── policies/             # 공통 정책 (RULE)
+│       └── password.md
+├── fdd/                      # 2단계 FDD — 기능(FEAT)마다 하나
+│   ├── signup.md             # REQ, AC, FLOW, DATA, 기능 전용 RULE
 │   ├── login.md
-│   ├── signup.md
 │   └── account.md
-├── rules/                    # 정책 (RULE)
-│   └── password-policy.md
-├── screens/                  # 화면 정의 (SCR)
-│   └── signup.md
-└── data/                     # 데이터 항목 (DATA)
-    └── user.md
+└── ia/                       # 3단계 IA
+    ├── sitemap.md            # 메뉴 계층과 화면 목록
+    └── screens/              # 화면별 정의 (SCR)
+        ├── signup.md
+        └── account.md
 ```
 
 ### 6.2 문서 형식
 
-- 파일 맨 위에 YAML front matter를 둔다.
+- 파일 맨 위에 YAML front matter를 둔다. 공통 필드는 `id`, `doc`(`prd`·`fdd`·`ia`), `title`, `owner`, `status`, `version`이다. FDD는 어느 기능을 상세화하는지 `feature`를 추가로 적는다.
 - 기획 요소는 `### {ID} {제목}` 헤딩으로 시작한다.
-- 다른 요소는 `[[ID]]`로 참조한다. 파서는 필드 라벨을 보고 관계 타입을 정한다.
+- 다른 요소는 `[[ID]]`로 참조한다. 파서는 요소 타입과 필드 라벨을 보고 관계 타입을 정한다.
+- 하위 단계 문서만 상위 단계 요소를 참조한다. 그래서 요구사항과 화면의 연결(`APPEARS_ON`)은 FDD가 아니라 IA에 적는다. FDD를 쓰는 시점에는 아직 화면이 정해지지 않았기 때문이다.
 
-| 필드 라벨 | 관계 |
-|---|---|
-| `화면:` | `APPEARS_ON` |
-| `정책:` | `GOVERNED_BY` |
-| `데이터:` | `USES` |
-| `의존:` | `DEPENDS_ON` |
-| `인수 조건:` | `HAS_CRITERIA` (하위 항목이 AC 노드가 됨) |
+| 문서 | 요소 | 필드 라벨 | 관계 |
+|---|---|---|---|
+| FDD | (front matter) | `feature:` | `HAS_REQUIREMENT` (문서 안의 모든 요구사항에 적용) |
+| FDD | Requirement | `정책:` | `GOVERNED_BY` |
+| FDD | Requirement | `데이터:` | `USES` |
+| FDD | Requirement | `의존:` | `DEPENDS_ON` |
+| FDD | Requirement | `인수 조건:` | `HAS_CRITERIA` (하위 항목이 AC 노드가 됨) |
+| FDD | Requirement | `노출: 없음` | 관계 없음. 화면이 필요 없는 요구사항 표시 (린트 L11 제외) |
+| FDD | Flow | `단계:` | `COVERS` (순서 있음) |
+| IA | Screen | `상위:` | `CHILD_OF` |
+| IA | Screen | `이동:` | `NAVIGATES_TO` |
+| IA | Screen | `요구사항:` | `APPEARS_ON` (Requirement → Screen으로 저장) |
+| IA | Screen | `플로우:` | `PASSES_THROUGH` (Flow → Screen으로 저장) |
 
-**작성 예시** — `specs/features/signup.md`
+**① PRD 작성 예시** — `specs/prd/prd.md`, `specs/prd/policies/password.md`
 
 ````markdown
 ---
-id: FEAT-SIGNUP
-type: Feature
-title: 회원가입
+id: PRD-MAIN
+doc: prd
+title: 회원 서비스 PRD
+owner: jisu.kim
+status: approved
+version: 1.3.0
+---
+
+## 목표
+- 가입 완료율을 높이고, 계정 보안 사고를 줄인다.
+
+## 기능 목록
+
+### FEAT-SIGNUP 회원가입
+- 설명: 신규 사용자가 이메일로 계정을 만든다.
+- 정책: [[RULE-PW-001]]
+
+### FEAT-ACCOUNT 계정 관리
+- 설명: 회원이 비밀번호와 프로필을 관리한다.
+- 정책: [[RULE-PW-001]]
+````
+
+````markdown
+---
+id: PRD-POLICY-PW
+doc: prd
+title: 비밀번호 정책
+owner: jisu.kim
+status: approved
+version: 1.2.0
+---
+
+### RULE-PW-001 비밀번호 정책
+- 최소 8자, 영문과 숫자 조합
+````
+
+**② FDD 작성 예시** — `specs/fdd/signup.md`
+
+````markdown
+---
+id: FDD-SIGNUP
+doc: fdd
+feature: FEAT-SIGNUP
+title: 회원가입 FDD
 owner: jisu.kim
 status: approved          # draft | review | approved | deprecated
 version: 1.4.0
 ---
 
-# 회원가입
-
-## 개요
-신규 사용자가 이메일로 계정을 만든다.
-
 ## 요구사항
 
 ### REQ-SIGNUP-001 이메일 입력
 - 설명: 사용자는 이메일을 입력하고 중복 여부를 확인한다.
-- 화면: [[SCR-SIGNUP]]
 - 데이터: [[DATA-USER]]
 - 인수 조건:
   - AC-SIGNUP-001-01: 이미 가입된 이메일이면 "이미 사용 중인 이메일입니다"를 표시한다.
 
 ### REQ-SIGNUP-002 비밀번호 설정
 - 설명: 사용자는 정책에 맞는 비밀번호를 설정한다.
-- 화면: [[SCR-SIGNUP]]
 - 정책: [[RULE-PW-001]]
 - 의존: [[REQ-SIGNUP-001]]
 - 인수 조건:
   - AC-SIGNUP-002-01: 8자 미만이면 "8자 이상 입력해주세요"를 표시한다.
   - AC-SIGNUP-002-02: 비밀번호 확인 값이 다르면 가입 버튼을 비활성화한다.
   - AC-SIGNUP-002-03: 영문과 숫자가 모두 포함되지 않으면 안내 문구를 표시한다.
+
+## 플로우
+
+### FLOW-SIGNUP-01 이메일 가입
+- 단계: [[REQ-SIGNUP-001]] → [[REQ-SIGNUP-002]]
+- 예외: 이메일 중복 시 로그인 화면으로 안내
 ````
+
+**③ IA 작성 예시** — `specs/ia/sitemap.md`, `specs/ia/screens/signup.md`
+
+````markdown
+---
+id: IA-SITEMAP
+doc: ia
+title: 사이트맵
+owner: jisu.kim
+status: approved
+version: 1.1.0
+---
+
+- 홈 [[SCR-HOME]]
+  - 회원가입 [[SCR-SIGNUP]]
+    - 가입 완료 [[SCR-SIGNUP-DONE]]
+  - 내 계정 [[SCR-ACCOUNT]]
+    - 비밀번호 변경 [[SCR-ACCOUNT-PW]]
+````
+
+````markdown
+---
+id: IA-SCR-SIGNUP
+doc: ia
+title: 회원가입 화면
+owner: jisu.kim
+status: approved
+version: 1.1.0
+---
+
+### SCR-SIGNUP 회원가입
+- 상위: [[SCR-HOME]]
+- 요구사항: [[REQ-SIGNUP-001]], [[REQ-SIGNUP-002]]
+- 플로우: [[FLOW-SIGNUP-01]]
+- 이동: [[SCR-SIGNUP-DONE]] (가입 완료 시), [[SCR-LOGIN]] (이메일 중복 시)
+- 구성: 이메일 입력, 비밀번호 입력, 비밀번호 확인, 가입 버튼
+````
+
+> 사이트맵의 들여쓰기 목록은 화면 정의 파일의 `상위:` 필드와 같은 정보다. 파서는 둘이 다르면 린트 에러로 알린다.
 
 ### 6.3 린트 규칙
 
@@ -476,14 +643,19 @@ version: 1.4.0
 
 | 코드 | 규칙 | 수준 |
 |---|---|---|
-| L01 | front matter 필수 필드(`id`, `type`, `owner`, `status`, `version`)가 있다 | Error |
-| L02 | 모든 요구사항·인수 조건·정책은 ID를 가진다 | Error |
+| L01 | front matter 필수 필드(`id`, `doc`, `title`, `owner`, `status`, `version`, FDD는 `feature`)가 있다 | Error |
+| L02 | 모든 요구사항·인수 조건·정책·플로우·화면은 ID를 가진다 | Error |
 | L03 | `[[ID]]`로 참조한 요소가 존재하고 deprecated가 아니다 | Error |
 | L04 | ID가 중복되지 않고, deprecated ID를 재사용하지 않는다 | Error |
 | L05 | 기존 ID가 사라지지 않았다 (삭제 대신 deprecated) | Error |
 | L06 | 요구사항마다 인수 조건이 1개 이상 있다 | Error |
 | L07 | 같은 대상에 서로 다른 값을 정한 정책이 없다 (예: 비밀번호 최소 길이가 두 문서에서 다름) | Warning |
 | L08 | 용어집에 없는 용어를 쓰지 않았다 | Warning |
+| L09 | 상위 단계 변경으로 Stale이 된 하위 단계 요소가 남아 있지 않다 (수정했거나 "변경 없음"으로 확인함) | Error |
+| L10 | 상위 단계 문서가 하위 단계 요소를 참조하지 않는다 (PRD → FDD·IA, FDD → IA 참조 금지) | Error |
+| L11 | 요구사항이 IA의 화면 하나 이상에 배치되어 있다 (`노출: 없음` 제외) | Warning |
+| L12 | PRD의 Feature마다 FDD가 하나씩 있다 | Warning |
+| L13 | 사이트맵 계층과 화면 정의의 `상위:` 필드가 일치한다 | Error |
 
 ### 6.4 변경 유형과 버전 정책
 
@@ -512,27 +684,34 @@ version: 1.4.0
 
 | 항목 | 내용 |
 |---|---|
-| 목적 | 기획자가 자연어로 쓰면 규약에 맞는 기획서가 나오게 한다. 누락과 충돌을 작성 단계에서 잡는다. |
+| 목적 | 기획자가 자연어로 쓰면 규약에 맞는 PRD·FDD·IA가 나오게 한다. 누락과 충돌을 작성 단계에서 잡고, 상위 단계가 바뀌면 하위 단계를 함께 맞춘다. |
 | 트리거 | 기획자가 에이전트에게 요청 (대화형), 또는 기획 PR 생성·업데이트 |
 | 입력 | 자연어 메모, 회의록, 기존 기획서 |
-| 출력 | 기획서 PR, 점검 결과 코멘트 |
+| 출력 | 기획서 PR (연쇄 수정 초안 포함), 점검 결과와 연쇄 수정 체크리스트 코멘트 |
 
 **처리**
-1. 자연어 초안을 6.2 형식으로 바꾸고 `next_id`로 ID를 부여한다.
+1. 자연어 초안을 6.2 형식으로 바꾸고 `next_id`로 ID를 부여한다. 내용에 맞는 단계(PRD·FDD·IA) 문서에 넣는다.
 2. 누락을 점검한다.
    - 인수 조건이 없는 요구사항
    - 예외 케이스: 실패, 빈 값, 권한 없음, 네트워크 오류, 기존 데이터 처리
-   - 본문에 언급됐지만 참조가 빠진 정책·화면·데이터
+   - 본문에 언급됐지만 참조가 빠진 정책·데이터
+   - FDD가 없는 Feature, IA에 배치되지 않은 요구사항
 3. 온톨로지와 대조한다.
    - 비슷한 요구사항이 이미 있는지 (중복)
    - 같은 대상의 정책 값이 다른 문서와 다른지 (충돌)
    - 용어집과 다른 표현을 쓰는지
-4. 변경 유형을 분류하고 문서 버전 증가를 제안한다.
-5. 린트(6.3)를 실행한다.
+4. **연쇄 수정 초안 (PRD → FDD → IA)**: 상위 단계 요소가 바뀌면 단계 간 관계(5.8)를 따라 영향받는 하위 단계 요소를 찾는다.
+   - 고쳐야 할 요소는 수정 초안을 만들어 **같은 PR**에 커밋한다. 예: PRD 정책의 최소 길이가 바뀌면 FDD 인수 조건의 "8자" 문구를 고친다.
+   - 고칠 필요가 없어 보이는 요소는 사유와 함께 "변경 없음" 후보로 올린다.
+   - PR 코멘트에 단계별 체크리스트를 단다. 기획자가 항목마다 초안을 수락·수정하거나 "변경 없음"을 체크하면 해당 링크의 `synced_version`이 올라간다.
+   - 하위 단계 탐색은 PRD → FDD → IA 순서로 한 단계씩 내려간다. FDD 초안이 확정되어야 IA 초안을 만든다.
+5. 변경 유형을 분류하고 문서 버전 증가를 제안한다. 연쇄 수정으로 함께 바뀐 하위 문서의 버전도 제안한다.
+6. 린트(6.3)를 실행한다. 체크리스트에 남은 항목이 있으면 L09로 merge가 막힌다.
 
 **예외**
 - 충돌을 발견하면 자동으로 고치지 않는다. 선택지를 제시하고 기획자가 고른다.
-- 기획자가 규약 변환 결과를 수정하면 그 수정을 우선한다.
+- 기획자가 규약 변환 결과나 연쇄 수정 초안을 고치면 그 수정을 우선한다.
+- 하위 단계 문서를 먼저 고쳤는데 상위 단계와 맞지 않으면(예: FDD에서 PRD에 없는 정책 값을 씀) 상위 단계를 고칠지, 하위 단계를 되돌릴지 기획자에게 묻는다.
 
 ### F2. 온톨로지 연결 (Ingestion)
 
@@ -544,7 +723,7 @@ version: 1.4.0
 | 출력 | 갱신된 온톨로지, SpecVersion 노드, ChangeSet(F3로 전달) |
 
 **처리**
-1. **결정적 파싱**: front matter, ID 헤딩, 필드 라벨, `[[ID]]` 참조를 노드와 엣지로 바꾼다.
+1. **결정적 파싱**: front matter, ID 헤딩, 필드 라벨, `[[ID]]` 참조를 노드와 엣지로 바꾼다. 요소마다 front matter의 `doc` 값을 `doc_level`로 기록하고, 단계를 넘는 관계에는 `synced_version`을 붙인다 (5.8).
 2. **Upsert**: ID 기준으로 반영한다. 요소 내용이 바뀌었고 변경 유형이 Editorial이 아니면 `version`을 1 올린다.
 3. **관계 추론 (LLM 보조)**: 본문에 명시되지 않은 관계 후보를 찾는다.
    - 예: 요구사항 설명에 "비밀번호"가 나오지만 `RULE-PW-001` 참조가 없음
@@ -611,7 +790,9 @@ version: 1.4.0
 
 | 변경 요소 | 디자인 | 개발 | QA |
 |---|---|---|---|
-| Screen 추가·변경 | ● | ○ | ○ |
+| Screen 추가·변경 (IA) | ● | ○ | ○ |
+| 메뉴 계층·화면 간 이동 변경 (IA) | ● | ● | ○ |
+| Flow 추가·변경 (FDD) | ● | ○ | ● |
 | Requirement 동작 변경 | ○ | ● | ● |
 | AcceptanceCriteria 추가·변경 | ○ | ○ | ● |
 | BusinessRule 값 변경 | ○ | ● | ● |
@@ -620,6 +801,8 @@ version: 1.4.0
 | Term 변경 | ○ | — | ○ |
 
 ● 항상 포함 (연결 산출물이 없으면 신규 작업으로) / ○ 연결된 산출물이 있을 때만 포함 / — 포함 안 함
+
+> 영향도 분석의 대상은 디자인·개발·QA 산출물이다. 기획 안의 하위 단계(FDD·IA)는 F1의 연쇄 수정으로 merge 전에 이미 맞춰져 있으므로 CR 대상이 아니다.
 
 **예외**
 - 영향 산출물이 0건이고 신규 작업도 없으면 "영향 없음"으로 기록하고 승인 단계 없이 종료한다.
@@ -820,12 +1003,15 @@ stateDiagram-v2
 기획자가 Spec Agent에게 말한다: "비밀번호 정책을 10자 이상, 특수문자 포함으로 바꿔줘."
 
 Spec Agent가 하는 일:
-- `rules/password-policy.md`의 `RULE-PW-001`을 수정한다.
-- 온톨로지에서 이 정책을 따르는 요구사항 3개를 찾는다.
-- `AC-SIGNUP-002-01`에 "8자 미만"이라는 문구가 있어 함께 고쳐야 한다고 알린다.
-- 특수문자 누락 시 동작이 정의되지 않았다며 인수 조건 추가를 제안한다 → `AC-SIGNUP-002-04` 신규.
+- **PRD**: `prd/policies/password.md`의 `RULE-PW-001`을 수정한다.
 - 예외 케이스 점검: "기존 회원의 비밀번호에도 새 정책을 적용하는지 정의되지 않았습니다." → 기획자가 "다음 비밀번호 변경 시부터 적용"으로 정하고 정책 본문에 추가한다.
-- 버전을 제안한다: `password-policy.md` 1.2.0 → 2.0.0 (Rule 변경), `signup.md` 1.4.0 → 1.5.0 (Behavioral 변경)
+- **PRD → FDD 연쇄 수정**: 이 정책을 따르는 FDD 요구사항 3개(`REQ-SIGNUP-002`, `REQ-ACCOUNT-004`, `REQ-LOGIN-001`)를 찾아 같은 PR에 초안을 넣는다.
+  - `fdd/signup.md`: `AC-SIGNUP-002-01`의 "8자 미만"을 "10자 미만"으로 고친다. 특수문자 누락 시 동작이 없어 `AC-SIGNUP-002-04`를 새로 제안한다.
+  - `fdd/account.md`: `AC-ACCOUNT-004-02`는 "정책에 맞지 않으면 에러"라고만 적혀 있어 "변경 없음" 후보로 올린다.
+  - `fdd/login.md`: 로그인은 비밀번호 형식을 검증하지 않아 "변경 없음" 후보로 올린다.
+- **FDD → IA 연쇄 수정**: 위 요구사항이 배치된 화면(`SCR-SIGNUP`, `SCR-ACCOUNT-PW`, `SCR-LOGIN`)을 확인한다. 화면 구성과 이동은 그대로라 모두 "변경 없음" 후보로 올린다.
+- 기획자는 PR 체크리스트에서 FDD 초안 2건을 수락하고, 나머지 "변경 없음" 4건을 체크한다. L09가 통과해 merge할 수 있게 된다.
+- 버전을 제안한다: `prd/policies/password.md` 1.2.0 → 2.0.0 (Rule 변경), `fdd/signup.md` 1.4.0 → 1.5.0 (Behavioral 변경). 나머지 문서는 내용이 바뀌지 않아 버전을 유지한다.
 
 **② 온톨로지 연결과 변경 감지 (F2, F3)**
 
@@ -881,7 +1067,7 @@ ClickUp에 태스크 3개가 생기고 `#design`, `#dev`, `#qa`에 알림이 간
 
 | 에이전트 | 유형 | 입력 | 출력 | 사용 도구 | 온톨로지 권한 |
 |---|---|---|---|---|---|
-| **Spec Agent** | LLM 에이전트 (대화형) | 자연어 요청, 기존 기획서 | 기획서 PR, 점검 코멘트 | Ontology MCP, GitHub | 읽기 |
+| **Spec Agent** | LLM 에이전트 (대화형) | 자연어 요청, 기존 PRD·FDD·IA | 기획서 PR (연쇄 수정 초안 포함), 점검 코멘트 | Ontology MCP, GitHub | 읽기 |
 | **Ingestion Agent** | 코드 + LLM 보조 | 기획서 스냅샷 | 노드·엣지 반영, ChangeSet, 관계 후보 | Ontology MCP, GitHub | 기획 노드 쓰기 |
 | **Impact Agent** | 코드(그래프 탐색) + LLM 보정 | ChangeSet | Impact Report | Ontology MCP, GitHub(PR 코멘트) | 읽기 |
 | **Dispatcher** | 결정적 워크플로 | Impact Report, 승인 이벤트, 완료 회신 | CR, ClickUp 태스크, Slack 메시지, 이벤트 | Ontology MCP, ClickUp API, Slack API | 메타 노드 쓰기 |
@@ -893,7 +1079,7 @@ ClickUp에 태스크 3개가 생기고 `#design`, `#dev`, `#qa`에 알림이 간
 
 | 지점 | LLM이 하는 일 | 안전 장치 |
 |---|---|---|
-| F1 작성 보조 | 형식 변환, 누락·충돌 탐지 | 결과는 PR로만 나가고 기획자가 merge한다 |
+| F1 작성 보조 | 형식 변환, 누락·충돌 탐지, 하위 단계 연쇄 수정 초안 | 결과는 PR로만 나가고, 기획자가 체크리스트로 항목마다 확인한 뒤 merge한다 |
 | F2 관계 추론 | 명시되지 않은 관계 후보 제안 | `proposed` 상태로 저장하고, 기획서에 반영돼야 확정된다 |
 | F3 변경 분류·요약 | 규칙으로 정할 수 없는 유형 분류, 한 줄 요약 | before/after 원문을 함께 보여준다 |
 | F4 영향 보정 | 제외·추가 제안 | 제안만 하고 삭제하지 않는다. 사유와 근거가 필수다. 최종 결정은 기획자 |
@@ -934,7 +1120,7 @@ ClickUp에 태스크 3개가 생기고 `#design`, `#dev`, `#qa`에 알림이 간
       "summary": "비밀번호 최소 길이 8자 → 10자, 특수문자 필수",
       "before": "최소 8자, 영문과 숫자 조합",
       "after": "최소 10자, 영문·숫자·특수문자 각 1개 이상. 기존 회원은 다음 비밀번호 변경 시 적용",
-      "source": "specs/rules/password-policy.md#L12-L18"
+      "source": "specs/prd/policies/password.md#L10-L14"
     },
     {
       "element_id": "AC-SIGNUP-002-04",
@@ -944,7 +1130,7 @@ ClickUp에 태스크 3개가 생기고 `#design`, `#dev`, `#qa`에 알림이 간
       "summary": "특수문자 누락 시 에러 표시 조건 신규",
       "before": null,
       "after": "특수문자가 없으면 \"특수문자를 1개 이상 포함해주세요\"를 표시한다.",
-      "source": "specs/features/signup.md#L31"
+      "source": "specs/fdd/signup.md#L28"
     }
   ]
 }
@@ -1251,8 +1437,8 @@ ChangeSet 5건 · CR 발행 12건 · 완료 9건 · 평균 반영 리드타임 2
 
 | Phase | 목표 | 주요 산출물 | 완료 기준 |
 |---|---|---|---|
-| **0. 기반 정비** | 규약과 스키마 확정 | 작성 규약, ID 체계, `schema.yaml`, 파일럿 기능 1개 이관, 기준선 지표 측정 | 파일럿 기능이 규약대로 작성되고 린트 통과 |
-| **1. MVP** | 결정적 파이프라인 | Spec Agent 기본(형식 변환, ID 발급, 린트), 결정적 파싱 Ingestion, 그래프 기반 영향 분석, PR 미리보기, Slack 승인, ClickUp 발행, 수동 역링크, 수동 완료 처리 | 파일럿 기능에서 실제 기획 변경 3건 이상을 처음부터 끝까지 처리 |
+| **0. 기반 정비** | 규약과 스키마 확정 | PRD·FDD·IA 템플릿과 작성 규약, ID 체계, `schema.yaml`, 파일럿 기능 1개를 PRD → FDD → IA로 이관, 기준선 지표 측정 | 파일럿 기능의 세 문서가 규약대로 작성되고 린트 통과 |
+| **1. MVP** | 결정적 파이프라인 | Spec Agent 기본(형식 변환, ID 발급, 린트, 연쇄 수정 체크리스트), 결정적 파싱 Ingestion, 그래프 기반 영향 분석, PR 미리보기, Slack 승인, ClickUp 발행, 수동 역링크, 수동 완료 처리 | 파일럿 기능에서 실제 기획 변경 3건 이상을 처음부터 끝까지 처리 |
 | **2. 지능화** | LLM 보정과 자동화 | 변경 의미 요약, 영향 보정 제안, 관계 추론, 충돌 탐지, 도메인 에이전트 자동 착수, Figma·GitHub 자동 역링크, 리마인드, 주간 다이제스트 | 영향 분석 정밀도·재현율 목표 달성 |
 | **3. 확장** | 양방향과 전사 적용 | 도메인 → 기획 피드백(`spec.feedback`), 동기화 대시보드, 경미한 변경(Copy 등) 자동 승인 정책, 전체 기능 이관 | 추적 커버리지 90% |
 
@@ -1302,13 +1488,15 @@ flowchart LR
 version: 1
 
 node_types:
-  Feature:            { id_prefix: FEAT, domain: spec }
-  Requirement:        { id_prefix: REQ,  domain: spec }
-  AcceptanceCriteria: { id_prefix: AC,   domain: spec }
-  BusinessRule:       { id_prefix: RULE, domain: spec }
-  Screen:             { id_prefix: SCR,  domain: spec }
-  DataEntity:         { id_prefix: DATA, domain: spec }
-  Term:               { id_prefix: TERM, domain: spec }
+  # doc_level: 기획 요소가 정의되는 문서 단계 (5.8)
+  Feature:            { id_prefix: FEAT, domain: spec, doc_level: prd }
+  Requirement:        { id_prefix: REQ,  domain: spec, doc_level: fdd }
+  AcceptanceCriteria: { id_prefix: AC,   domain: spec, doc_level: fdd }
+  BusinessRule:       { id_prefix: RULE, domain: spec, doc_level: [prd, fdd] }
+  Term:               { id_prefix: TERM, domain: spec, doc_level: prd }
+  Flow:               { id_prefix: FLOW, domain: spec, doc_level: fdd }
+  DataEntity:         { id_prefix: DATA, domain: spec, doc_level: fdd }
+  Screen:             { id_prefix: SCR,  domain: spec, doc_level: ia }
   DesignFrame:        { id_prefix: DSN,  domain: design }
   DesignComponent:    { id_prefix: DSC,  domain: design }
   CodeModule:         { id_prefix: CODE, domain: dev }
@@ -1325,22 +1513,33 @@ relations:
   HAS_CRITERIA:    { from: Requirement, to: AcceptanceCriteria, propagate: both,    weight: high }
   GOVERNED_BY:     { from: Requirement, to: BusinessRule,       propagate: reverse, weight: high }
   APPEARS_ON:      { from: Requirement, to: Screen,             propagate: both,    weight: medium }
+  COVERS:          { from: Flow,        to: Requirement,        propagate: both,    weight: medium }
+  PASSES_THROUGH:  { from: Flow,        to: Screen,             propagate: both,    weight: medium }
+  CHILD_OF:        { from: Screen,      to: Screen,             propagate: reverse, weight: low }
+  NAVIGATES_TO:    { from: Screen,      to: Screen,             propagate: reverse, weight: low, max_depth: 1 }
   USES:            { from: Requirement, to: DataEntity,         propagate: reverse, weight: medium }
   DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: low, max_depth: 1 }
   REFERS_TO:       { from: "*spec",     to: Term,               propagate: reverse, weight: low, max_depth: 1 }
 
   # 추적 관계: synced_version을 관리한다
-  IMPLEMENTS: { from: DesignFrame,               to: [Screen, Requirement],             propagate: reverse, traceability: true }
+  IMPLEMENTS: { from: DesignFrame,               to: [Screen, Requirement, Flow],       propagate: reverse, traceability: true }
   REALIZES:   { from: [CodeModule, APIEndpoint], to: Requirement,                       propagate: reverse, traceability: true }
   REALIZES_DATA: { from: DataModel,              to: DataEntity,                        propagate: reverse, traceability: true }
-  VERIFIES:   { from: TestCase,                  to: [AcceptanceCriteria, Requirement], propagate: reverse, traceability: true }
+  VERIFIES:   { from: TestCase,                  to: [AcceptanceCriteria, Requirement, Flow], propagate: reverse, traceability: true }
 
-field_labels:          # 기획서 필드 라벨 → 관계
-  "화면": APPEARS_ON
-  "정책": GOVERNED_BY
-  "데이터": USES
-  "의존": DEPENDS_ON
-  "인수 조건": HAS_CRITERIA
+field_labels:          # 문서 단계·요소 타입별 필드 라벨 → 관계 (6.2)
+  fdd:
+    front_matter: { feature: HAS_REQUIREMENT }
+    Requirement:  { "정책": GOVERNED_BY, "데이터": USES, "의존": DEPENDS_ON, "인수 조건": HAS_CRITERIA }
+    Flow:         { "단계": COVERS }
+  ia:
+    Screen:       { "상위": CHILD_OF, "이동": NAVIGATES_TO, "요구사항": APPEARS_ON, "플로우": PASSES_THROUGH }
+
+cross_level_sync:      # 단계를 넘는 관계는 synced_version을 관리한다 (5.8, 린트 L09)
+  - HAS_REQUIREMENT    # PRD → FDD
+  - GOVERNED_BY        # PRD 공통 정책 → FDD
+  - APPEARS_ON         # FDD → IA
+  - PASSES_THROUGH     # FDD → IA
 ```
 
 > 본문 5.3에서는 읽기 쉽게 DataModel → DataEntity 관계도 `REALIZES`로 표기했다. 스키마에서는 출발·도착 타입이 달라 `REALIZES_DATA`로 분리한다.
@@ -1367,6 +1566,7 @@ field_labels:          # 기획서 필드 라벨 → 관계
 | 기획에서 부르는 말 | 온톨로지 | GitHub | Figma | ClickUp | Slack |
 |---|---|---|---|---|---|
 | 기획 변경 한 건 | ChangeSet | 기획 PR | — | — | 승인 카드 |
+| 하위 단계 맞추기 | 단계 간 synced_version 갱신 | 같은 PR의 연쇄 수정 커밋과 체크리스트 | — | — | — |
 | 도메인 작업 요청 | ChangeRequest | (코드 PR에서 참조) | — | 태스크 | 도메인 채널 알림 |
 | 반영 완료 | CR Resolved, synced_version 갱신 | merge된 PR | 프레임 버전 | Complete | 완료 알림 |
 | 기획 근거 표시 | 추적 관계 | `Implements:` 태그 | 프레임 설명의 `spec:` | 커스텀 필드 | — |
