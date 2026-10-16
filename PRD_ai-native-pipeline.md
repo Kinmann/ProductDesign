@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |---|---|
 | 문서 ID | PRD-PIPELINE-001 |
-| 버전 | v0.2 (초안) |
+| 버전 | v0.3 (초안) |
 | 작성일 | 2026-10-16 |
 | 작성자 | jisu.kim |
 | 상태 | Draft |
@@ -15,6 +15,7 @@
 
 | 버전 | 날짜 | 내용 |
 |---|---|---|
+| v0.3 | 2026-10-16 | 정책 값을 "- 항목: 값" 목록으로 쓰고, 다른 문서는 값과 괄호 출처로 인용(`CITES`). 정책 값 충돌을 린트(L07·L14)와 Spec Agent 충돌 체크리스트(L15)로 나눠 검사 |
 | v0.2 | 2026-10-16 | 기획 산출물을 PRD → FDD → IA 3단계로 나눔. 단계별 기획 요소, 단계 간 연결(5.8), 기획 내부 연쇄 수정(F1), 저장소 구조와 작성 예시 갱신 |
 | v0.1 | 2026-10-16 | 최초 작성 |
 
@@ -254,7 +255,7 @@ flowchart TB
 | 단계 | 타입 | ID 접두사 | 설명 | 예시 |
 |---|---|---|---|---|
 | PRD | Feature | `FEAT` | 사용자 관점의 기능 묶음. FDD 하나와 짝을 이룬다 | `FEAT-SIGNUP` 회원가입 |
-| PRD | BusinessRule | `RULE` | 여러 기능에 걸친 공통 정책 | `RULE-PW-001` 비밀번호 정책 |
+| PRD | BusinessRule | `RULE` | 여러 기능에 걸친 공통 정책. 항목별 정책 값(`values`)을 속성으로 가진다 | `RULE-PW-001` 비밀번호 정책 (최소 길이: 10자, …) |
 | PRD | Term | `TERM` | 용어 | `TERM-MEMBER` 회원 |
 | FDD | Requirement | `REQ` | 요구사항 | `REQ-SIGNUP-002` 비밀번호 설정 |
 | FDD | AcceptanceCriteria | `AC` | 인수 조건 | `AC-SIGNUP-002-01` |
@@ -301,6 +302,7 @@ flowchart TB
 | `USES` | Requirement → DataEntity | 요구사항이 데이터를 사용 | 역방향 | medium |
 | `DEPENDS_ON` | Requirement → Requirement | 요구사항 간 의존 | 역방향 | low |
 | `REFERS_TO` | (모든 기획 요소) → Term | 용어 참조 | 역방향 | low |
+| `CITES` | (모든 기획 요소) → BusinessRule | 정책 값 인용. 어느 항목을 어떤 값으로 인용했는지(`item`, `value`)를 속성으로 가진다 | 역방향 | high |
 | `COVERS` | Flow → Requirement | 플로우가 거치는 요구사항 | 양방향 | medium |
 | `PASSES_THROUGH` | Flow → Screen | 플로우가 지나가는 화면 (FDD → IA) | 양방향 | medium |
 | `CHILD_OF` | Screen → Screen | 메뉴 계층의 상위 화면 | 역방향 | low |
@@ -506,9 +508,13 @@ specs/
 - 기획 요소는 `### {ID} {제목}` 헤딩으로 시작한다.
 - 다른 요소는 `[[ID]]`로 참조한다. 파서는 요소 타입과 필드 라벨을 보고 관계 타입을 정한다.
 - 하위 단계 문서만 상위 단계 요소를 참조한다. 그래서 요구사항과 화면의 연결(`APPEARS_ON`)은 FDD가 아니라 IA에 적는다. FDD를 쓰는 시점에는 아직 화면이 정해지지 않았기 때문이다.
+- **정책 값은 "- 항목: 값" 목록으로 쓴다.** 정책(RULE) 헤딩 아래의 각 줄이 정책 값 하나가 된다. 표나 코드 블록이 아니라 일반 글머리 목록이라 누구나 그대로 읽을 수 있다. 기계는 "정책 ID + 항목 이름"(예: `RULE-PW-001`의 `최소 길이`)으로 값을 식별한다.
+- **다른 문서에서 정책 값을 쓸 때는 값을 그대로 쓰고 출처를 괄호로 단다.** 예: `10자 미만이면 … 표시한다. (RULE-PW-001 최소 길이)`. 읽는 사람은 값을 바로 보고, 기계는 이 값이 어느 정책 항목인지 안다 (`CITES` 관계). 출처 달기는 Spec Agent가 초안을 만들 때 대신 붙여 준다.
 
 | 문서 | 요소 | 필드 라벨 | 관계 |
 |---|---|---|---|
+| PRD·FDD | BusinessRule | `- 항목: 값` (그 밖의 라벨) | 정책 값. `설명:`만 예외로 본문 설명 |
+| FDD | (모든 요소의 본문) | `(RULE-ID 항목)` 괄호 출처 | `CITES` (정책 값 인용) |
 | FDD | (front matter) | `feature:` | `HAS_REQUIREMENT` (문서 안의 모든 요구사항에 적용) |
 | FDD | Requirement | `정책:` | `GOVERNED_BY` |
 | FDD | Requirement | `데이터:` | `USES` |
@@ -558,7 +564,10 @@ version: 1.2.0
 ---
 
 ### RULE-PW-001 비밀번호 정책
-- 최소 8자, 영문과 숫자 조합
+- 최소 길이: 8자
+- 필수 문자: 영문, 숫자 각 1개 이상
+- 적용 대상: 모든 회원
+- 설명: 가입과 비밀번호 변경 시 검증한다.
 ````
 
 **② FDD 작성 예시** — `specs/fdd/signup.md`
@@ -587,7 +596,7 @@ version: 1.4.0
 - 정책: [[RULE-PW-001]]
 - 의존: [[REQ-SIGNUP-001]]
 - 인수 조건:
-  - AC-SIGNUP-002-01: 8자 미만이면 "8자 이상 입력해주세요"를 표시한다.
+  - AC-SIGNUP-002-01: 8자 미만이면 "8자 이상 입력해주세요"를 표시한다. (RULE-PW-001 최소 길이)
   - AC-SIGNUP-002-02: 비밀번호 확인 값이 다르면 가입 버튼을 비활성화한다.
   - AC-SIGNUP-002-03: 영문과 숫자가 모두 포함되지 않으면 안내 문구를 표시한다.
 
@@ -641,6 +650,8 @@ version: 1.1.0
 
 기획 PR마다 자동으로 검사한다. Error가 있으면 merge할 수 없다.
 
+정합성 검사는 두 층으로 나뉜다. 규칙으로 판단할 수 있는 불일치(L01~L14)는 린트가 직접 잡는다. 판단이 필요한 불일치(출처 없이 쓴 정책 값, 문장끼리의 의미 충돌)는 Spec Agent가 찾아 체크리스트로 올리고 기획자가 결정한다. 린트는 그 체크리스트가 모두 처리됐는지만 본다(L15).
+
 | 코드 | 규칙 | 수준 |
 |---|---|---|
 | L01 | front matter 필수 필드(`id`, `doc`, `title`, `owner`, `status`, `version`, FDD는 `feature`)가 있다 | Error |
@@ -649,13 +660,15 @@ version: 1.1.0
 | L04 | ID가 중복되지 않고, deprecated ID를 재사용하지 않는다 | Error |
 | L05 | 기존 ID가 사라지지 않았다 (삭제 대신 deprecated) | Error |
 | L06 | 요구사항마다 인수 조건이 1개 이상 있다 | Error |
-| L07 | 같은 대상에 서로 다른 값을 정한 정책이 없다 (예: 비밀번호 최소 길이가 두 문서에서 다름) | Warning |
+| L07 | 같은 정책 항목이 두 곳 이상에서 서로 다른 값으로 정의되지 않았다 (예: `RULE-PW-001`의 최소 길이가 두 문서에서 다름) | Error |
 | L08 | 용어집에 없는 용어를 쓰지 않았다 | Warning |
 | L09 | 상위 단계 변경으로 Stale이 된 하위 단계 요소가 남아 있지 않다 (수정했거나 "변경 없음"으로 확인함) | Error |
 | L10 | 상위 단계 문서가 하위 단계 요소를 참조하지 않는다 (PRD → FDD·IA, FDD → IA 참조 금지) | Error |
 | L11 | 요구사항이 IA의 화면 하나 이상에 배치되어 있다 (`노출: 없음` 제외) | Warning |
 | L12 | PRD의 Feature마다 FDD가 하나씩 있다 | Warning |
 | L13 | 사이트맵 계층과 화면 정의의 `상위:` 필드가 일치한다 | Error |
+| L14 | 괄호 출처를 단 값이 정책 값과 일치한다 (예: `(RULE-PW-001 최소 길이)`를 달고 "8자"라고 썼는데 정책은 10자) | Error |
+| L15 | Spec Agent가 올린 충돌 체크리스트(F1)에 처리하지 않은 항목이 없다 | Error |
 
 ### 6.4 변경 유형과 버전 정책
 
@@ -698,10 +711,13 @@ version: 1.1.0
    - FDD가 없는 Feature, IA에 배치되지 않은 요구사항
 3. 온톨로지와 대조한다.
    - 비슷한 요구사항이 이미 있는지 (중복)
-   - 같은 대상의 정책 값이 다른 문서와 다른지 (충돌)
    - 용어집과 다른 표현을 쓰는지
+   - 정책 값 충돌: 규칙으로 잡히는 것(L07 중복 정의, L14 출처를 단 값의 불일치)은 린트가 판단한다. Spec Agent는 그 밖의 경우를 찾는다.
+     - 출처 없이 정책 값을 쓴 문장 (예: FDD 본문의 "최소 8자") → 정책 값과 같으면 출처 달기를, 다르면 수정을 제안한다.
+     - 문장끼리 의미가 어긋나는 경우 (예: PRD "주문은 회원만 가능" ↔ FDD "비회원 주문 시 …")
+   - 찾은 항목은 근거(어느 문서의 어느 문장끼리 부딪히는지)와 함께 PR의 **충돌 체크리스트**에 올린다. 기획자가 항목마다 "고침" 또는 "충돌 아님(사유)"으로 처리해야 merge할 수 있다 (L15). 찾는 것은 에이전트, 결정은 기획자다.
 4. **연쇄 수정 초안 (PRD → FDD → IA)**: 상위 단계 요소가 바뀌면 단계 간 관계(5.8)를 따라 영향받는 하위 단계 요소를 찾는다.
-   - 고쳐야 할 요소는 수정 초안을 만들어 **같은 PR**에 커밋한다. 예: PRD 정책의 최소 길이가 바뀌면 FDD 인수 조건의 "8자" 문구를 고친다.
+   - 고쳐야 할 요소는 수정 초안을 만들어 **같은 PR**에 커밋한다. 예: PRD 정책의 최소 길이가 바뀌면 FDD 인수 조건의 "8자" 문구를 고친다. 그 정책 항목을 괄호 출처로 인용한 문장은 `CITES` 관계로 빠짐없이 찾는다.
    - 고칠 필요가 없어 보이는 요소는 사유와 함께 "변경 없음" 후보로 올린다.
    - PR 코멘트에 단계별 체크리스트를 단다. 기획자가 항목마다 초안을 수락·수정하거나 "변경 없음"을 체크하면 해당 링크의 `synced_version`이 올라간다.
    - 하위 단계 탐색은 PRD → FDD → IA 순서로 한 단계씩 내려간다. FDD 초안이 확정되어야 IA 초안을 만든다.
@@ -723,7 +739,7 @@ version: 1.1.0
 | 출력 | 갱신된 온톨로지, SpecVersion 노드, ChangeSet(F3로 전달) |
 
 **처리**
-1. **결정적 파싱**: front matter, ID 헤딩, 필드 라벨, `[[ID]]` 참조를 노드와 엣지로 바꾼다. 요소마다 front matter의 `doc` 값을 `doc_level`로 기록하고, 단계를 넘는 관계에는 `synced_version`을 붙인다 (5.8).
+1. **결정적 파싱**: front matter, ID 헤딩, 필드 라벨, `[[ID]]` 참조, 정책 값 목록, 괄호 출처를 노드·속성·엣지로 바꾼다. 요소마다 front matter의 `doc` 값을 `doc_level`로 기록하고, 단계를 넘는 관계에는 `synced_version`을 붙인다 (5.8).
 2. **Upsert**: ID 기준으로 반영한다. 요소 내용이 바뀌었고 변경 유형이 Editorial이 아니면 `version`을 1 올린다.
 3. **관계 추론 (LLM 보조)**: 본문에 명시되지 않은 관계 후보를 찾는다.
    - 예: 요구사항 설명에 "비밀번호"가 나오지만 `RULE-PW-001` 참조가 없음
@@ -1006,11 +1022,12 @@ Spec Agent가 하는 일:
 - **PRD**: `prd/policies/password.md`의 `RULE-PW-001`을 수정한다.
 - 예외 케이스 점검: "기존 회원의 비밀번호에도 새 정책을 적용하는지 정의되지 않았습니다." → 기획자가 "다음 비밀번호 변경 시부터 적용"으로 정하고 정책 본문에 추가한다.
 - **PRD → FDD 연쇄 수정**: 이 정책을 따르는 FDD 요구사항 3개(`REQ-SIGNUP-002`, `REQ-ACCOUNT-004`, `REQ-LOGIN-001`)를 찾아 같은 PR에 초안을 넣는다.
-  - `fdd/signup.md`: `AC-SIGNUP-002-01`의 "8자 미만"을 "10자 미만"으로 고친다. 특수문자 누락 시 동작이 없어 `AC-SIGNUP-002-04`를 새로 제안한다.
+  - `fdd/signup.md`: `AC-SIGNUP-002-01`은 `(RULE-PW-001 최소 길이)` 출처가 달려 있어 바로 찾는다. "8자 미만"을 "10자 미만"으로 고친다. 특수문자 누락 시 동작이 없어 `AC-SIGNUP-002-04`를 새로 제안한다. `AC-SIGNUP-002-03`(영문·숫자 포함)은 새 정책에서도 그대로 맞아서 고치지 않는다.
   - `fdd/account.md`: `AC-ACCOUNT-004-02`는 "정책에 맞지 않으면 에러"라고만 적혀 있어 "변경 없음" 후보로 올린다.
   - `fdd/login.md`: 로그인은 비밀번호 형식을 검증하지 않아 "변경 없음" 후보로 올린다.
 - **FDD → IA 연쇄 수정**: 위 요구사항이 배치된 화면(`SCR-SIGNUP`, `SCR-ACCOUNT-PW`, `SCR-LOGIN`)을 확인한다. 화면 구성과 이동은 그대로라 모두 "변경 없음" 후보로 올린다.
-- 기획자는 PR 체크리스트에서 FDD 초안 2건을 수락하고, 나머지 "변경 없음" 4건을 체크한다. L09가 통과해 merge할 수 있게 된다.
+- 출처 없이 정책 값을 쓴 문장은 찾지 못했다. 충돌 체크리스트는 비어 있다.
+- 기획자는 PR 체크리스트에서 FDD 초안을 수락하고 "변경 없음" 4건을 체크한다. L09와 L15가 통과해 merge할 수 있게 된다.
 - 버전을 제안한다: `prd/policies/password.md` 1.2.0 → 2.0.0 (Rule 변경), `fdd/signup.md` 1.4.0 → 1.5.0 (Behavioral 변경). 나머지 문서는 내용이 바뀌지 않아 버전을 유지한다.
 
 **② 온톨로지 연결과 변경 감지 (F2, F3)**
@@ -1492,7 +1509,7 @@ node_types:
   Feature:            { id_prefix: FEAT, domain: spec, doc_level: prd }
   Requirement:        { id_prefix: REQ,  domain: spec, doc_level: fdd }
   AcceptanceCriteria: { id_prefix: AC,   domain: spec, doc_level: fdd }
-  BusinessRule:       { id_prefix: RULE, domain: spec, doc_level: [prd, fdd] }
+  BusinessRule:       { id_prefix: RULE, domain: spec, doc_level: [prd, fdd], props: [values] }  # values: { "최소 길이": "10자", ... }
   Term:               { id_prefix: TERM, domain: spec, doc_level: prd }
   Flow:               { id_prefix: FLOW, domain: spec, doc_level: fdd }
   DataEntity:         { id_prefix: DATA, domain: spec, doc_level: fdd }
@@ -1520,6 +1537,7 @@ relations:
   USES:            { from: Requirement, to: DataEntity,         propagate: reverse, weight: medium }
   DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: low, max_depth: 1 }
   REFERS_TO:       { from: "*spec",     to: Term,               propagate: reverse, weight: low, max_depth: 1 }
+  CITES:           { from: "*spec",     to: BusinessRule,       propagate: reverse, weight: high, props: [item, value] }
 
   # 추적 관계: synced_version을 관리한다
   IMPLEMENTS: { from: DesignFrame,               to: [Screen, Requirement, Flow],       propagate: reverse, traceability: true }
@@ -1528,9 +1546,13 @@ relations:
   VERIFIES:   { from: TestCase,                  to: [AcceptanceCriteria, Requirement, Flow], propagate: reverse, traceability: true }
 
 field_labels:          # 문서 단계·요소 타입별 필드 라벨 → 관계 (6.2)
+  prd:
+    BusinessRule: { "*": value, "설명": description }   # "- 항목: 값" 줄은 모두 정책 값
   fdd:
     front_matter: { feature: HAS_REQUIREMENT }
+    citation:     { pattern: "(RULE-ID 항목)", relation: CITES }   # 본문 어디서나
     Requirement:  { "정책": GOVERNED_BY, "데이터": USES, "의존": DEPENDS_ON, "인수 조건": HAS_CRITERIA }
+    BusinessRule: { "*": value, "설명": description }   # "- 항목: 값" 줄은 모두 정책 값
     Flow:         { "단계": COVERS }
   ia:
     Screen:       { "상위": CHILD_OF, "이동": NAVIGATES_TO, "요구사항": APPEARS_ON, "플로우": PASSES_THROUGH }
@@ -1540,6 +1562,7 @@ cross_level_sync:      # 단계를 넘는 관계는 synced_version을 관리한�
   - GOVERNED_BY        # PRD 공통 정책 → FDD
   - APPEARS_ON         # FDD → IA
   - PASSES_THROUGH     # FDD → IA
+  - CITES              # PRD 정책 값 → FDD 본문
 ```
 
 > 본문 5.3에서는 읽기 쉽게 DataModel → DataEntity 관계도 `REALIZES`로 표기했다. 스키마에서는 출발·도착 타입이 달라 `REALIZES_DATA`로 분리한다.
