@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   DOC_LEVELS,
   nodeTypeForId,
+  STATUS_FIELD,
   toUid,
   type DocLevel,
   type GraphSnapshot,
@@ -29,6 +30,8 @@ const HEADING = /^(#{1,6})\s+(.*)$/;
 const ELEMENT_HEADING = new RegExp(`^(${ID})\\s+(.+)$`);
 const REFERENCE = new RegExp(`\\[\\[(${ID})\\]\\]`, "g");
 const FENCE = /^\s*(```|~~~)/;
+/** Spec elements are written as `### {ID} {title}` (PRD 6.2). */
+const ELEMENT_HEADING_LEVEL = "###";
 const TOP_ITEM = /^- (.*)$/;
 const NESTED_ITEM = /^(\s+)- (.*)$/;
 const FIELD = /^([^:[\]]+?):\s*(.*)$/;
@@ -57,7 +60,9 @@ export function parseSpecs(roots: string | string[], options: ParseOptions): Gra
 interface OpenElement {
   node: SpecNode;
   lines: string[];
-  /** Relation of the last top-level field, so nested items (acceptance criteria) know their parent. */
+  /** A second definition of an existing ID: kept for lint (L04, L07) but adds no relations. */
+  duplicate: boolean;
+  /** Relation of the last top-level field when its nested items are elements (acceptance criteria). */
   fieldRelation?: RelationDef;
 }
 
@@ -66,6 +71,7 @@ export class SnapshotBuilder {
   private readonly edges = new Map<string, SpecEdge>();
   private readonly documents: SpecDocument[] = [];
   private readonly sitemap: SitemapEntry[] = [];
+  private readonly duplicates: SpecNode[] = [];
   private readonly issues: ParseIssue[] = [];
   private readonly citation?: { relation: RelationDef; pattern: RegExp };
   private readonly options: ParseOptions;
@@ -114,7 +120,11 @@ export class SnapshotBuilder {
       if (heading) {
         close();
         const element = ELEMENT_HEADING.exec(heading[2]!.trim());
-        if (element) current = this.openElement(element[1]!, element[2]!, docLevel, source, doc);
+        if (element) {
+          current = this.openElement(element[1]!, element[2]!, docLevel, source, doc);
+        } else if (heading[1] === ELEMENT_HEADING_LEVEL && docLevel) {
+          this.issue("L02", "error", `기획 요소 헤딩(###)에 ID가 없습니다: ${heading[2]!.trim()}`, source);
+        }
         continue;
       }
 
@@ -150,6 +160,7 @@ export class SnapshotBuilder {
       nodes: [...this.nodes.values()].sort(byUid),
       edges: [...this.edges.values()].sort(byEdge),
       sitemap: this.sitemap,
+      duplicates: this.duplicates,
       issues: this.issues,
     };
   }
@@ -186,8 +197,8 @@ export class SnapshotBuilder {
       this.issue("P01", "warning", `알 수 없는 ID 접두사라 기획 요소로 읽지 않았습니다: ${id}`, source);
       return undefined;
     }
-    const node = this.addNode(id, type.name, title.trim(), docLevel, source, doc);
-    return node && { node, lines: [title.trim()] };
+    const { node, duplicate } = this.addNode(id, type.name, title.trim(), docLevel, source, doc);
+    return { node, duplicate, lines: [title.trim()] };
   }
 
   private closeElement(element: OpenElement): void {
@@ -201,18 +212,8 @@ export class SnapshotBuilder {
     docLevel: DocLevel | undefined,
     source: SourceRef,
     doc: SpecDocument,
-  ): SpecNode | undefined {
+  ): { node: SpecNode; duplicate: boolean } {
     const uid = toUid(this.options.project, id);
-    const existing = this.nodes.get(uid);
-    if (existing) {
-      this.issue(
-        "L04",
-        "error",
-        `ID가 중복됩니다: ${id} (처음 정의: ${existing.source.file}:${existing.source.line})`,
-        source,
-      );
-      return undefined;
-    }
     const node: SpecNode = {
       uid,
       project: uid.slice(0, uid.indexOf(":")),
@@ -225,13 +226,21 @@ export class SnapshotBuilder {
       contentHash: hashText([title]),
       source,
     };
+    if (this.nodes.has(uid)) {
+      this.duplicates.push(node);
+      return { node, duplicate: true };
+    }
     this.nodes.set(uid, node);
     doc.elementUids.push(uid);
-    return node;
+    return { node, duplicate: false };
   }
 
   private readField(element: OpenElement, label: string, value: string, source: SourceRef): void {
     const { node } = element;
+    if (label === STATUS_FIELD) {
+      node.attrs[label] = value;
+      return;
+    }
     const labels = node.docLevel && this.options.schema.fieldLabels.get(node.docLevel)?.get(node.type);
     const target = labels?.get(label) ?? labels?.get(ANY_LABEL);
 
@@ -250,8 +259,9 @@ export class SnapshotBuilder {
     }
 
     node.attrs[label] = value;
-    element.fieldRelation = relation;
+    if (element.duplicate) return;
     const refs = [...value.matchAll(REFERENCE)].map((m) => m[1]!);
+    if (refs.length === 0) element.fieldRelation = relation;
     const ordered = value.includes("→");
     refs.forEach((ref, index) => {
       this.connect(relation, node, ref, source, ordered ? { order: index + 1 } : {});
@@ -264,6 +274,7 @@ export class SnapshotBuilder {
     const relation = element.fieldRelation!;
     if (!match) {
       element.lines.push(text);
+      this.issue("L02", "error", `${relation.name} 하위 항목에 ID가 없습니다: ${text.trim()}`, source);
       return;
     }
     const [, id, body] = match as unknown as [string, string, string];
@@ -272,14 +283,14 @@ export class SnapshotBuilder {
       this.issue("P01", "warning", `알 수 없는 ID 접두사라 기획 요소로 읽지 않았습니다: ${id}`, source);
       return;
     }
-    const child = this.addNode(id, type.name, body.trim(), element.node.docLevel, source, doc);
-    if (!child) return;
+    const { node: child, duplicate } = this.addNode(id, type.name, body.trim(), element.node.docLevel, source, doc);
+    if (duplicate) return;
     this.connect(relation, element.node, id, source, {});
     this.readCitations(child, body, source);
   }
 
   private readCitations(node: SpecNode, text: string, source: SourceRef): void {
-    if (!this.citation) return;
+    if (!this.citation || this.duplicates.includes(node)) return;
     for (const [, ref, item] of text.matchAll(this.citation.pattern)) {
       this.connect(this.citation.relation, node, ref!, source, { item: item!.trim(), text: text.trim() });
     }

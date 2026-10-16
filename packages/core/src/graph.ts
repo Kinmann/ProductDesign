@@ -48,7 +48,7 @@ export interface SitemapEntry {
 }
 
 export interface ParseIssue {
-  /** Lint code when the problem maps to a rule (e.g. L01, L04), otherwise a parser code (Pxx). */
+  /** Lint code when the problem maps to a rule (e.g. L01, L02), otherwise a parser code (Pxx). */
   code: string;
   severity: "error" | "warning";
   message: string;
@@ -61,8 +61,14 @@ export interface GraphSnapshot {
   nodes: SpecNode[];
   edges: SpecEdge[];
   sitemap: SitemapEntry[];
+  /** Second and later definitions of an ID already in `nodes` (lint L04, L07). They add no relations. */
+  duplicates: SpecNode[];
   issues: ParseIssue[];
 }
+
+/** Field every element may carry to mark its lifecycle: `- 상태: deprecated` (PRD 5.6). Never a relation or policy value. */
+export const STATUS_FIELD = "상태";
+export const DEPRECATED = "deprecated";
 
 const PROJECT_SEPARATOR = ":";
 

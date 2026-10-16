@@ -164,9 +164,19 @@ version: 0.1.0
     expect(s.issues.map((i) => i.code)).toContain("L01");
   });
 
-  it("reports duplicate IDs with the first location", () => {
-    const s = parseOne("### REQ-X-001 a\n### REQ-X-001 b\n");
-    expect(s.issues).toMatchObject([{ code: "L04", message: expect.stringContaining("fdd/x.md:10") }]);
+  it("keeps a duplicate definition aside without its relations", () => {
+    const s = parseOne("### REQ-X-001 a\n### REQ-X-001 b\n- 의존: [[REQ-X-002]]\n");
+    expect(s.nodes.map((n) => n.title)).toEqual(["a"]);
+    expect(s.duplicates).toMatchObject([{ id: "REQ-X-001", title: "b", source: { line: 11 } }]);
+    expect(s.edges.filter((e) => e.type === "DEPENDS_ON")).toEqual([]);
+  });
+
+  it("reports spec headings and acceptance criteria without an ID (L02)", () => {
+    const s = parseOne("### 이메일 입력\n### REQ-X-001 a\n- 인수 조건:\n  - ID 없는 조건\n");
+    expect(s.issues.map((i) => [i.code, i.source.line])).toEqual([
+      ["L02", 10],
+      ["L02", 13],
+    ]);
   });
 
   it("reports a relation that cannot connect the two types", () => {
