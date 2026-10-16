@@ -1,0 +1,67 @@
+# 하위 도메인 산출물과 기획 요소의 연결 (예제).
+# 실제 운영에서는 디자인·개발·QA 에이전트가 link_artifact로 등록한다 (기획서 F2).
+# source는 예제용 가짜 위치다.
+# synced_version은 적지 않는다. 등록할 때 연결된 요소의 현재 버전이 기록된다.
+
+project: DEMO
+
+artifacts:
+  # 디자인
+  - id: DSN-SIGNUP-PW
+    type: DesignFrame
+    title: 회원가입 비밀번호 입력
+    source: figma:DEMO/회원가입/비밀번호 입력
+    links:
+      - { relation: IMPLEMENTS, to: REQ-SIGNUP-002 }
+
+  - id: DSN-ACCOUNT-PWCHANGE
+    type: DesignFrame
+    title: 비밀번호 변경
+    source: figma:DEMO/내 계정/비밀번호 변경
+    links:
+      - { relation: IMPLEMENTS, to: SCR-ACCOUNT-PW }
+
+  - id: DSN-LOGIN-MAIN
+    type: DesignFrame
+    title: 로그인
+    source: figma:DEMO/로그인/기본
+    links:
+      - { relation: IMPLEMENTS, to: REQ-LOGIN-001 }
+
+  # 개발
+  - id: CODE-auth/password-validator
+    type: CodeModule
+    title: 비밀번호 검증 모듈
+    source: repo:DEMO-app/src/auth/password-validator.ts
+    links:
+      - { relation: REALIZES, to: REQ-SIGNUP-002 }
+      - { relation: REALIZES, to: REQ-ACCOUNT-004 }
+
+  - id: CODE-auth/login
+    type: CodeModule
+    title: 로그인 처리 모듈
+    source: repo:DEMO-app/src/auth/login.ts
+    links:
+      - { relation: REALIZES, to: REQ-LOGIN-001 }
+
+  # QA
+  - id: TC-SIGNUP-007
+    type: TestCase
+    title: 비밀번호 최소 길이 미만 입력 시 에러
+    source: repo:DEMO-qa/cases/signup/TC-SIGNUP-007.md
+    links:
+      - { relation: VERIFIES, to: AC-SIGNUP-002-01 }
+
+  - id: TC-ACCOUNT-012
+    type: TestCase
+    title: 비밀번호 변경 시 정책 검증
+    source: repo:DEMO-qa/cases/account/TC-ACCOUNT-012.md
+    links:
+      - { relation: VERIFIES, to: AC-ACCOUNT-004-02 }
+
+  - id: TC-LOGIN-020
+    type: TestCase
+    title: 기존 회원 로그인 성공
+    source: repo:DEMO-qa/cases/login/TC-LOGIN-020.md
+    links:
+      - { relation: VERIFIES, to: AC-LOGIN-001-01 }

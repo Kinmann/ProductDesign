@@ -1,0 +1,53 @@
+# 비밀번호 정책 변경 시나리오의 기대 결과 (기획서 8.4).
+# M4(변경 감지·L09), M5(영향도 분석) 테스트가 이 파일과 결과를 비교한다.
+#
+# 적용 방법: examples/demo/specs 위에 이 폴더의 specs/를 덮어쓴다.
+#   1단계: prd/policies/password.md만 덮어쓴다 (정책만 바꾸고 FDD는 그대로)
+#   2단계: fdd/signup.md도 덮어쓴다 (연쇄 수정 반영)
+
+step1_policy_only:
+  lint_errors:
+    # 출처를 단 값이 정책과 다름: AC는 8자, 정책은 10자
+    - { rule: L14, element: AC-SIGNUP-002-01 }
+    # 정책이 바뀌었는데 하위 단계가 검토되지 않음 (GOVERNED_BY, CITES)
+    - { rule: L09, element: REQ-SIGNUP-002, upper: RULE-PW-001 }
+    - { rule: L09, element: REQ-LOGIN-001, upper: RULE-PW-001 }
+    - { rule: L09, element: REQ-ACCOUNT-004, upper: RULE-PW-001 }
+    - { rule: L09, element: AC-SIGNUP-002-01, upper: RULE-PW-001 }
+
+step2_cascaded:
+  # AC-SIGNUP-002-01은 수정됐으므로 검토된 것으로 본다.
+  # 나머지 세 요구사항은 기획자가 "변경 없음"으로 확인해야 merge할 수 있다.
+  lint_errors:
+    - { rule: L09, element: REQ-SIGNUP-002, upper: RULE-PW-001 }
+    - { rule: L09, element: REQ-LOGIN-001, upper: RULE-PW-001 }
+    - { rule: L09, element: REQ-ACCOUNT-004, upper: RULE-PW-001 }
+  after_confirming_no_change: { lint_errors: [] }
+
+  changeset:
+    - { element: RULE-PW-001, op: modified, change_type: Rule }
+    - { element: AC-SIGNUP-002-01, op: modified, change_type: Behavioral }
+    - { element: AC-SIGNUP-002-04, op: added, change_type: Behavioral }
+
+  impact:
+    # 기획서 8.4 ③ 표. LLM 제외 제안(DSN-LOGIN-MAIN, CODE-auth/login, TC-LOGIN-020)은
+    # 1a 범위가 아니므로 그래프 탐색 결과에 그대로 남는다.
+    artifacts:
+      - { domain: design, artifact: DSN-SIGNUP-PW, grade: High,
+          trace: [RULE-PW-001, REQ-SIGNUP-002, DSN-SIGNUP-PW] }
+      - { domain: design, artifact: DSN-ACCOUNT-PWCHANGE, grade: Medium,
+          trace: [RULE-PW-001, REQ-ACCOUNT-004, SCR-ACCOUNT-PW, DSN-ACCOUNT-PWCHANGE] }
+      - { domain: design, artifact: DSN-LOGIN-MAIN, grade: High,
+          trace: [RULE-PW-001, REQ-LOGIN-001, DSN-LOGIN-MAIN] }
+      - { domain: dev, artifact: CODE-auth/password-validator, grade: High,
+          trace: [RULE-PW-001, REQ-SIGNUP-002, CODE-auth/password-validator] }
+      - { domain: dev, artifact: CODE-auth/login, grade: High,
+          trace: [RULE-PW-001, REQ-LOGIN-001, CODE-auth/login] }
+      - { domain: qa, artifact: TC-SIGNUP-007, grade: High,
+          trace: [AC-SIGNUP-002-01, TC-SIGNUP-007] }
+      - { domain: qa, artifact: TC-ACCOUNT-012, grade: Medium,
+          trace: [RULE-PW-001, REQ-ACCOUNT-004, AC-ACCOUNT-004-02, TC-ACCOUNT-012] }
+      - { domain: qa, artifact: TC-LOGIN-020, grade: Medium,
+          trace: [RULE-PW-001, REQ-LOGIN-001, AC-LOGIN-001-01, TC-LOGIN-020] }
+    new_work:
+      - { domain: qa, element: AC-SIGNUP-002-04, action: create, grade: High }
