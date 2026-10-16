@@ -2,6 +2,14 @@ import neo4j, { type Driver, type ManagedTransaction } from "neo4j-driver";
 import type { ChangeSet, GraphStore, IngestPlan, LinkPlan, StoredEdge, StoredElement, StoredGraph } from "./types.ts";
 import { edgeKey } from "./types.ts";
 
+export interface ReadQueryResult {
+  columns: string[];
+  rows: unknown[][];
+  truncated: boolean;
+  /** Projects of returned nodes and relationship endpoints that are outside the allowed set. */
+  outOfScope: string[];
+}
+
 export interface Neo4jConfig {
   uri: string;
   username: string;
@@ -192,6 +200,71 @@ export class Neo4jStore implements GraphStore {
         createdAt: String(p.createdAt),
         changes: JSON.parse(String(p.changes_json)),
       };
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Runs a Cypher query in a read transaction (Neo4j refuses writes in read access mode), with a timeout and a row cap.
+   * Every returned node and relationship endpoint is checked against `allowedProjects`.
+   */
+  async readQuery(
+    cypher: string,
+    params: Record<string, unknown>,
+    options: { allowedProjects: string[]; timeoutMs: number; maxRows: number },
+  ): Promise<ReadQueryResult> {
+    const session = this.driver.session({ ...this.sessionConfig(), defaultAccessMode: neo4j.session.READ });
+    try {
+      return await session.executeRead(
+        async (tx) => {
+          const result = await tx.run(cypher, params);
+          const nodeProjects = new Set<string>();
+          const relationshipIds = new Set<string>();
+          const plain = (value: unknown): unknown => {
+            if (neo4j.isNode(value as never)) {
+              const node = value as { labels: string[]; properties: Record<string, unknown> };
+              nodeProjects.add(String(node.properties.project ?? "(none)"));
+              return { labels: node.labels, properties: plain(node.properties) };
+            }
+            if (neo4j.isRelationship(value as never)) {
+              const rel = value as { elementId: string; type: string; properties: Record<string, unknown> };
+              relationshipIds.add(rel.elementId);
+              return { type: rel.type, properties: plain(rel.properties) };
+            }
+            if (neo4j.isPath(value as never)) {
+              const path = value as { segments: { start: unknown; relationship: unknown; end: unknown }[] };
+              return path.segments.map((seg) => ({ start: plain(seg.start), relationship: plain(seg.relationship), end: plain(seg.end) }));
+            }
+            if (Array.isArray(value)) return value.map(plain);
+            if (value && typeof value === "object") {
+              if (typeof (value as { toString?: unknown }).toString === "function" && value.constructor?.name !== "Object") {
+                return String(value); // temporal and spatial values
+              }
+              return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v)]));
+            }
+            return value;
+          };
+          const rows = result.records.slice(0, options.maxRows).map((record) => record.keys.map((k) => plain(record.get(k))));
+          if (relationshipIds.size > 0) {
+            const ends = await tx.run(
+              "MATCH (a)-[r]->(b) WHERE elementId(r) IN $ids RETURN DISTINCT coalesce(a.project, '(none)') AS pa, coalesce(b.project, '(none)') AS pb",
+              { ids: [...relationshipIds] },
+            );
+            for (const record of ends.records) {
+              nodeProjects.add(String(record.get("pa")));
+              nodeProjects.add(String(record.get("pb")));
+            }
+          }
+          return {
+            columns: result.records[0]?.keys.map(String) ?? [],
+            rows,
+            truncated: result.records.length > options.maxRows,
+            outOfScope: [...nodeProjects].filter((p) => !options.allowedProjects.includes(p)),
+          };
+        },
+        { timeout: options.timeoutMs },
+      );
     } finally {
       await session.close();
     }

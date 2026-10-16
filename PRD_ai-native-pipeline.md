@@ -445,7 +445,7 @@ AC-SIGNUP-002-01 (version 2)
 | `report_completion(cr_id, result)` | CR 완료·반영 불필요 회신 | 도메인 에이전트, 담당자 | 자기 도메인 CR |
 | `get_sync_status(scope)` | 동기화 현황 조회 | 기획자, Dispatcher | 읽기 |
 | `get_schema()` | 노드·관계 타입과 전파 규칙 조회. 처음 붙는 에이전트가 구조를 파악할 때 쓴다 | 전체 | 읽기 |
-| `query_graph(cypher)` | 읽기 전용 Cypher 질의. MCP 서버가 쓰기 구문이 없는지 검사하고, 프로젝트 조건을 강제로 붙이고, 결과 건수와 실행 시간을 제한한다 | 전체 | 읽기 |
+| `query_graph(cypher)` | 읽기 전용 Cypher 질의. 네 겹으로 막는다: ① 쓰기·`CALL`·관리 구문과 여러 질의(`;`)를 거부 ② 모든 `MATCH`에 서버가 넣는 `$scope`(세션 프로젝트와 `shared`) 조건을 요구 ③ Neo4j 읽기 트랜잭션으로 실행해 쓰기를 DB가 거부 ④ 결과의 노드·관계 끝점 중 범위 밖 프로젝트가 하나라도 있으면 결과 전체를 돌려주지 않음. 결과 200행, 실행 5초 제한 | 전체 | 읽기 |
 
 ### 5.8 기획 단계(PRD · FDD · IA) 간 연결
 

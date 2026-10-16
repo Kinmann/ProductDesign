@@ -6,5 +6,19 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.1",
+    "@specflow/core": "0.0.0",
+    "@specflow/impact": "0.0.0",
+    "@specflow/store": "0.0.0",
+    "zod": "3.25.76"
+  },
+  "bin": {
+    "specflow-ontology-mcp": "./src/main.ts"
+  },
+  "devDependencies": {
+    "@specflow/cli": "0.0.0",
+    "@specflow/parser": "0.0.0"
   }
 }

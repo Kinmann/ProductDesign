@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "specflow-ontology": {
+      "command": "node",
+      "args": ["packages/mcp/src/main.ts", "--project", "DEMO"]
+    }
+  }
+}
