@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |---|---|
 | 문서 ID | PRD-PIPELINE-001 |
-| 버전 | v0.4 (초안) |
+| 버전 | v0.5 (초안) |
 | 작성일 | 2026-10-16 |
 | 작성자 | jisu.kim |
 | 상태 | Draft |
@@ -15,6 +15,7 @@
 
 | 버전 | 날짜 | 내용 |
 |---|---|---|
+| v0.5 | 2026-10-16 | 기능 간 의존(5.10): PRD의 기능 의존과 FDD의 요구사항 의존으로 나눠 적고 린트(L16~L18)로 맞춤. 같은 단계의 옆 기능까지 연쇄 수정, 요구사항 의존 가중치를 medium으로, CR 안 항목 순서와 CR 간 선후 관계에 기능 의존 반영 |
 | v0.4 | 2026-10-16 | 온톨로지를 "공통 스키마 + 저장소"로 정의하고 저장소를 기획 층과 링크·상태 층으로 나눔. 저장소를 Neo4j 단일 DB로 결정(O1). 멀티 프로젝트(5.9): 프로젝트 속성, 전역 ID, 공유 라이브러리, MCP 서버의 프로젝트 범위 강제. 읽기 전용 그래프 질의 도구 추가 |
 | v0.3 | 2026-10-16 | 정책 값을 "- 항목: 값" 목록으로 쓰고, 다른 문서는 값과 괄호 출처로 인용(`CITES`). 정책 값 충돌을 린트(L07·L14)와 Spec Agent 충돌 체크리스트(L15)로 나눠 검사 |
 | v0.2 | 2026-10-16 | 기획 산출물을 PRD → FDD → IA 3단계로 나눔. 단계별 기획 요소, 단계 간 연결(5.8), 기획 내부 연쇄 수정(F1), 저장소 구조와 작성 예시 갱신 |
@@ -104,6 +105,7 @@ flowchart LR
 | | 산출물 동기화 상태 추적, 리마인드, 다이제스트 |
 | | 도메인 에이전트 인터페이스 (요청 이벤트, 완료 회신 형식) |
 | **제외** | 디자인·개발·QA 에이전트가 실제로 작업하는 로직 (도메인별 기획에서 정의) |
+| | 기능별 출시 순서 같은 일정 관리 (ClickUp에서 관리) |
 | | 도메인 → 기획 방향 피드백의 상세 설계 (Phase 3에서 별도 기획) |
 | | 온톨로지 저장소(Neo4j) 인프라 운영 (배포, 백업, 모니터링) |
 
@@ -314,7 +316,8 @@ flowchart TB
 | `GOVERNED_BY` | Requirement → BusinessRule | 요구사항이 정책을 따름 | 역방향 | high |
 | `APPEARS_ON` | Requirement → Screen | 요구사항이 화면에 나타남 (FDD → IA) | 양방향 | medium |
 | `USES` | Requirement → DataEntity | 요구사항이 데이터를 사용 | 역방향 | medium |
-| `DEPENDS_ON` | Requirement → Requirement | 요구사항 간 의존 | 역방향 | low |
+| `FEATURE_DEPENDS_ON` | Feature → Feature | 기능 간 의존 (PRD). 정합성 검사와 의존 지도에 쓴다 (5.10) | — (전파는 요구사항 의존으로) | — |
+| `DEPENDS_ON` | Requirement → Requirement | 요구사항 간 의존 (FDD). 다른 기능의 요구사항도 가리킬 수 있다 | 역방향 | medium |
 | `REFERS_TO` | (모든 기획 요소) → Term | 용어 참조 | 역방향 | low |
 | `CITES` | (모든 기획 요소) → BusinessRule | 정책 값 인용. 어느 항목을 어떤 값으로 인용했는지(`item`, `value`)를 속성으로 가진다 | 역방향 | high |
 | `COVERS` | Flow → Requirement | 플로우가 거치는 요구사항 | 양방향 | medium |
@@ -534,6 +537,39 @@ flowchart LR
 - 기획 저장소를 프로젝트마다 따로 둘지, 하나의 저장소에 프로젝트 폴더로 나눌지
 - 공유 요소 변경을 각 프로젝트가 거절할 수 있는지 (공유 정책을 따르지 않는 예외를 허용할지)
 
+### 5.10 기능 간 의존
+
+기능(Feature)끼리도 의존한다. 예를 들어 주문은 로그인과 장바구니를 전제로 한다. 의존은 두 단계에서 나눠 적는다.
+
+| 단계 | 적는 것 | 관계 | 역할 |
+|---|---|---|---|
+| PRD | 기능이 **무엇에** 의존하는지 | `FEATURE_DEPENDS_ON` | 기획자가 전체 구조를 보는 지도. 정합성 검사의 기준 |
+| FDD | 요구사항 단위로 **정확히 어디에** 의존하는지 | `DEPENDS_ON` | 변경이 실제로 퍼지는 경로 |
+
+- 데이터 공유(`USES`), 화면 경유(`PASSES_THROUGH`), 정책 공유(`GOVERNED_BY`)로 생기는 의존은 이미 관계로 잡혀 있어 따로 적지 않는다.
+- 두 단계가 서로 맞는지는 린트가 검사한다 (L16~L18).
+  - FDD에서 다른 기능의 요구사항에 의존하면 PRD에도 그 기능 의존이 있어야 한다.
+  - PRD에만 있고 FDD에 근거가 없는 의존은 아직 상세화되지 않았다는 경고다.
+- 기능 의존 지도는 PRD에서 자동으로 만들어 기획 PR 코멘트에 붙인다 (F1). 변경된 기능과 그 기능에 의존하는 기능을 강조한다.
+
+```mermaid
+flowchart LR
+    LOGIN["FEAT-LOGIN<br/>로그인"]
+    SIGNUP["FEAT-SIGNUP<br/>회원가입"]
+    ACCOUNT["FEAT-ACCOUNT<br/>계정 관리"]
+    CART["FEAT-CART<br/>장바구니"]
+    ORDER["FEAT-ORDER<br/>주문"]
+    ACCOUNT -->|의존| LOGIN
+    ACCOUNT -->|의존| SIGNUP
+    CART -->|의존| LOGIN
+    ORDER -->|의존| LOGIN
+    ORDER -->|의존| CART
+```
+
+> 화살표는 "의존하는 기능 → 의존받는 기능" 방향이다. 로그인이 바뀌면 화살표를 거꾸로 따라 계정 관리, 장바구니, 주문이 검토 대상이 된다.
+
+**범위 밖**: "로그인을 먼저 출시해야 주문을 출시할 수 있다" 같은 일정상 순서는 기능 의존과 다른 정보다. ClickUp의 프로젝트 일정에서 관리한다.
+
 ---
 
 ## 6. 기획서 작성 규약 (Spec as Code)
@@ -580,7 +616,8 @@ specs/
 | FDD | (front matter) | `feature:` | `HAS_REQUIREMENT` (문서 안의 모든 요구사항에 적용) |
 | FDD | Requirement | `정책:` | `GOVERNED_BY` |
 | FDD | Requirement | `데이터:` | `USES` |
-| FDD | Requirement | `의존:` | `DEPENDS_ON` |
+| PRD | Feature | `의존:` | `FEATURE_DEPENDS_ON` |
+| FDD | Requirement | `의존:` | `DEPENDS_ON` (다른 기능의 요구사항도 가능) |
 | FDD | Requirement | `인수 조건:` | `HAS_CRITERIA` (하위 항목이 AC 노드가 됨) |
 | FDD | Requirement | `노출: 없음` | 관계 없음. 화면이 필요 없는 요구사항 표시 (린트 L11 제외) |
 | FDD | Flow | `단계:` | `COVERS` (순서 있음) |
@@ -610,9 +647,14 @@ version: 1.3.0
 - 설명: 신규 사용자가 이메일로 계정을 만든다.
 - 정책: [[RULE-PW-001]]
 
+### FEAT-LOGIN 로그인
+- 설명: 회원이 이메일과 비밀번호로 로그인한다.
+- 정책: [[RULE-PW-001]]
+
 ### FEAT-ACCOUNT 계정 관리
 - 설명: 회원이 비밀번호와 프로필을 관리한다.
 - 정책: [[RULE-PW-001]]
+- 의존: [[FEAT-LOGIN]] (로그인한 회원만 접근), [[FEAT-SIGNUP]]
 ````
 
 ````markdown
@@ -731,6 +773,9 @@ version: 1.1.0
 | L13 | 사이트맵 계층과 화면 정의의 `상위:` 필드가 일치한다 | Error |
 | L14 | 괄호 출처를 단 값이 정책 값과 일치한다 (예: `(RULE-PW-001 최소 길이)`를 달고 "8자"라고 썼는데 정책은 10자) | Error |
 | L15 | Spec Agent가 올린 충돌 체크리스트(F1)에 처리하지 않은 항목이 없다 | Error |
+| L16 | FDD의 요구사항이 다른 기능의 요구사항에 의존하면, PRD에도 그 기능 의존이 있다 | Error |
+| L17 | PRD의 기능 의존마다 FDD에 근거가 되는 요구사항 의존이 하나 이상 있다 | Warning |
+| L18 | 기능 의존이 순환하지 않는다 (A → B → A) | Warning |
 
 ### 6.4 변경 유형과 버전 정책
 
@@ -762,7 +807,7 @@ version: 1.1.0
 | 목적 | 기획자가 자연어로 쓰면 규약에 맞는 PRD·FDD·IA가 나오게 한다. 누락과 충돌을 작성 단계에서 잡고, 상위 단계가 바뀌면 하위 단계를 함께 맞춘다. |
 | 트리거 | 기획자가 에이전트에게 요청 (대화형), 또는 기획 PR 생성·업데이트 |
 | 입력 | 자연어 메모, 회의록, 기존 기획서 |
-| 출력 | 기획서 PR (연쇄 수정 초안 포함), 점검 결과와 연쇄 수정 체크리스트 코멘트 |
+| 출력 | 기획서 PR (연쇄 수정 초안 포함), 점검 결과·연쇄 수정 체크리스트·기능 의존 지도 코멘트 |
 
 **처리**
 1. 자연어 초안을 6.2 형식으로 바꾸고 `next_id`로 ID를 부여한다. 내용에 맞는 단계(PRD·FDD·IA) 문서에 넣는다.
@@ -783,6 +828,9 @@ version: 1.1.0
    - 고칠 필요가 없어 보이는 요소는 사유와 함께 "변경 없음" 후보로 올린다.
    - PR 코멘트에 단계별 체크리스트를 단다. 기획자가 항목마다 초안을 수락·수정하거나 "변경 없음"을 체크하면 해당 링크의 `synced_version`이 올라간다.
    - 하위 단계 탐색은 PRD → FDD → IA 순서로 한 단계씩 내려간다. FDD 초안이 확정되어야 IA 초안을 만든다.
+   - **같은 단계의 옆 기능도 본다.** 요구사항의 동작·정책·구조가 바뀌면(Editorial·Copy 제외), 그 요구사항에 `DEPENDS_ON`으로 의존하는 다른 기능의 요구사항도 체크리스트에 올린다. 예: `REQ-LOGIN-001`이 바뀌면 주문 FDD의 `REQ-ORDER-001`.
+   - FDD에 다른 기능 의존을 새로 적었는데 PRD에 기능 의존이 없으면(L16), PRD에 의존을 추가하는 초안을 함께 만든다.
+   - 기능 의존 지도(5.10)를 PR 코멘트에 붙인다.
 5. 변경 유형을 분류하고 문서 버전 증가를 제안한다. 연쇄 수정으로 함께 바뀐 하위 문서의 버전도 제안한다.
 6. 린트(6.3)를 실행한다. 체크리스트에 남은 항목이 있으면 L09로 merge가 막힌다.
 
@@ -855,7 +903,7 @@ version: 1.1.0
 | 출력 | Impact Report (도메인별 영향 목록, 등급, 근거 경로, LLM 제안) |
 
 **처리**
-1. **확장**: 변경된 요소에서 출발해, 기획 요소 간 관계를 전파 규칙(5.3)에 따라 따라가며 관련 요소를 모은다. 기본 최대 깊이는 3단계, `DEPENDS_ON`·`REFERS_TO`는 1단계까지만.
+1. **확장**: 변경된 요소에서 출발해, 기획 요소 간 관계를 전파 규칙(5.3)에 따라 따라가며 관련 요소를 모은다. 기본 최대 깊이는 3단계, `DEPENDS_ON`·`REFERS_TO`는 1단계까지만. `DEPENDS_ON`을 거치면 다른 기능의 산출물도 영향 후보가 된다.
 2. **산출물 수집**: 모은 요소에 추적 관계로 연결된 산출물을 모은다.
 3. **등급 산정**: 규칙 기반으로 High / Medium / Low를 정한다 (부록 B).
 4. **근거 경로**: 산출물마다 변경 요소에서 산출물까지의 경로를 붙인다.<br/>예: `RULE-PW-001 ←GOVERNED_BY─ REQ-SIGNUP-002 ←REALIZES─ CODE-auth/password-validator`
@@ -904,6 +952,7 @@ version: 1.1.0
 3. **선후 관계 제안**: 도메인 사이에 순서가 필요하면 CR에 `depends_on`을 건다. 기본값은 아래와 같고, 기획자가 승인 단계에서 해제하거나 바꿀 수 있다.
    - 같은 ChangeSet에 디자인 CR이 있으면 개발 CR은 디자인 CR 이후
    - QA CR의 TC 수정은 즉시 착수할 수 있지만, 검증 실행은 개발 CR 완료 후
+   - **기능 의존 순서**: 한 CR 안에 의존 관계인 기능의 대상이 함께 있으면, 의존받는 기능의 항목을 먼저 하도록 체크리스트 순서를 정하고 "선행 항목"을 표시한다. 다른 ChangeSet에서 나온, 아직 끝나지 않은 CR이 의존받는 기능을 다루고 있으면 새 CR에 그 CR을 `depends_on`으로 제안한다.
 4. **Slack 승인 요청**: 기획서 owner에게 승인 카드를 보낸다 (11.2).
    - 버튼: [전체 승인] [도메인별 조정] [보류] [Impact Report 보기]
    - 조정할 수 있는 것: 도메인 포함·제외, 항목 포함·제외(LLM 제안 수락·거절 포함), 우선순위, 기한, 담당자, 도메인에 전할 메모
@@ -1613,7 +1662,8 @@ relations:
   CHILD_OF:        { from: Screen,      to: Screen,             propagate: reverse, weight: low }
   NAVIGATES_TO:    { from: Screen,      to: Screen,             propagate: reverse, weight: low, max_depth: 1 }
   USES:            { from: Requirement, to: DataEntity,         propagate: reverse, weight: medium }
-  DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: low, max_depth: 1 }
+  FEATURE_DEPENDS_ON: { from: Feature, to: Feature,               propagate: none }   # 정합성 검사·의존 지도용 (5.10)
+  DEPENDS_ON:      { from: Requirement, to: Requirement,        propagate: reverse, weight: medium, max_depth: 1 }
   REFERS_TO:       { from: "*spec",     to: Term,               propagate: reverse, weight: low, max_depth: 1 }
   CITES:           { from: "*spec",     to: BusinessRule,       propagate: reverse, weight: high, props: [item, value] }
 
@@ -1625,6 +1675,7 @@ relations:
 
 field_labels:          # 문서 단계·요소 타입별 필드 라벨 → 관계 (6.2)
   prd:
+    Feature:      { "의존": FEATURE_DEPENDS_ON }
     BusinessRule: { "*": value, "설명": description }   # "- 항목: 값" 줄은 모두 정책 값
   fdd:
     front_matter: { feature: HAS_REQUIREMENT }
@@ -1635,12 +1686,13 @@ field_labels:          # 문서 단계·요소 타입별 필드 라벨 → 관�
   ia:
     Screen:       { "상위": CHILD_OF, "이동": NAVIGATES_TO, "요구사항": APPEARS_ON, "플로우": PASSES_THROUGH }
 
-cross_level_sync:      # 단계를 넘는 관계는 synced_version을 관리한다 (5.8, 린트 L09)
+sync_relations:        # synced_version을 관리하는 기획 요소 간 관계 (5.8, 5.10, 린트 L09)
   - HAS_REQUIREMENT    # PRD → FDD
   - GOVERNED_BY        # PRD 공통 정책 → FDD
   - APPEARS_ON         # FDD → IA
   - PASSES_THROUGH     # FDD → IA
   - CITES              # PRD 정책 값 → FDD 본문
+  - DEPENDS_ON         # 같은 단계의 다른 기능 요구사항
 ```
 
 > 본문 5.3에서는 읽기 쉽게 DataModel → DataEntity 관계도 `REALIZES`로 표기했다. 스키마에서는 출발·도착 타입이 달라 `REALIZES_DATA`로 분리한다.
@@ -1657,7 +1709,7 @@ cross_level_sync:      # 단계를 넘는 관계는 synced_version을 관리한�
 | **Medium** | High가 아니면서 거리 1~2 |
 | | 거리 0이고 변경 유형이 Copy |
 | **Low** | 거리 3 |
-| | 가중치 low 관계(`HAS_REQUIREMENT`, `DEPENDS_ON`, `REFERS_TO`)만 거쳐서 도달 |
+| | 가중치 low 관계(`HAS_REQUIREMENT`, `REFERS_TO`, `CHILD_OF`, `NAVIGATES_TO`)만 거쳐서 도달 |
 
 - 한 산출물이 여러 경로로 도달하면 가장 높은 등급을 쓴다.
 - 기준값은 Phase 2에서 기획자의 수락·거절 데이터로 조정한다 (O7).
